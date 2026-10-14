@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSCE AI Patient — Real Avatar Edition</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+:root{--bg:#010206;--panel:#050a14;--line:rgba(34,211,238,.09);--line2:rgba(34,211,238,.22);--text:#e2e8f0;--muted:#7d8ba3;--cyan:#22d3ee;--blue:#3b82f6;--green:#10b981;--red:#ef4444;--amber:#f59e0b;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--text);background:radial-gradient(1600px 1000px at 50% 50%,rgba(34,211,238,.03),transparent 75%),var(--bg);padding:16px;overflow-y:auto;min-height:100vh;padding-top:44px}
+body.session-mode{overflow:hidden;padding:10px;height:100vh;padding-top:40px}
+.app{max-width:1500px;margin:0 auto}
+body.session-mode .app{height:100%;display:flex;flex-direction:column}
+#logbar{position:fixed;top:0;left:0;right:0;z-index:9990;display:flex;flex-direction:column;pointer-events:none}
+#logbar .bar{pointer-events:auto;display:flex;align-items:center;gap:10px;background:rgba(5,10,20,.92);border-bottom:1px solid var(--line2);padding:6px 14px;backdrop-filter:blur(6px)}
+#logbar .bar b{font-size:11px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase}
+#logbar .bar .grow{flex:1}
+#log-toggle{background:#000;color:var(--cyan);border:1px solid var(--line2);border-radius:8px;font-size:11px;font-weight:800;padding:5px 12px;cursor:pointer;font-family:inherit}
+#logbar .bar .mini{font-size:10.5px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50vw}
+#debug-log{pointer-events:auto;display:none;max-height:30vh;overflow-y:auto;background:rgba(0,0,0,.94);border-bottom:1px solid var(--line2);padding:8px 14px;font-family:ui-monospace,monospace;font-size:11px;line-height:1.55}
+#debug-log.show{display:block}
+#debug-log .ok{color:#6ee7b7}#debug-log .err{color:#fca5a5}#debug-log .info{color:#93c5fd}#debug-log .warn{color:#fcd34d}
+.header{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;flex-shrink:0}
+.logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:#000;border:1px solid var(--line2);box-shadow:0 0 24px -8px var(--cyan)}
+.header h1{font-size:18px;font-weight:800;color:#fff}
+.header .sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;box-shadow:0 0 8px var(--green);animation:dotPulse 2s infinite}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.35}}
+#js-status{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(90deg,var(--cyan),var(--blue));color:#04121c;padding:5px 14px;font-size:11.5px;font-weight:800;z-index:9991;text-align:center}
+#toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);background:#050a14;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:99;display:none;max-width:85vw;border:1px solid var(--line2);box-shadow:0 20px 50px rgba(0,0,0,.85)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:12px}
+#session-panel{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;padding:0;overflow:hidden}
+.panel h2{font-size:11.5px;margin-bottom:14px;color:var(--cyan);letter-spacing:1.2px;text-transform:uppercase;font-weight:800;display:flex;align-items:center;gap:9px}
+.panel h2 .num{width:22px;height:22px;border-radius:6px;background:rgba(34,211,238,.1);display:grid;place-items:center;font-size:11px;color:var(--cyan);border:1px solid var(--line)}
+.hidden{display:none!important}
+.key-section{background:linear-gradient(135deg,rgba(34,211,238,.05),rgba(139,92,246,.05));border:1px solid rgba(139,92,246,.26);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.key-section h3{font-size:13px;font-weight:800;color:#c4b5fd;margin-bottom:8px}
+.key-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.key-row input{flex:1;min-width:220px;background:#000;border:1px solid var(--line2);color:var(--text);border-radius:10px;padding:11px 14px;font-size:13px;font-family:ui-monospace,monospace;outline:none}
+.key-row input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+.key-status{font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:8px;background:#000;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.key-status.ok{background:rgba(16,185,129,.12);color:#6ee7b7;border-color:rgba(16,185,129,.4)}
+.key-status.err{background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.4)}
+.key-status.pending{background:rgba(245,158,11,.12);color:#fcd34d;border-color:rgba(245,158,11,.4)}
+.key-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.55}
+.key-hint code{background:#000;padding:2px 6px;border-radius:4px;color:#a5f3fc;font-size:10.5px}
+.upload-zone{border:2px dashed rgba(148,163,184,.25);border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;transition:.25s;background:#000;margin-bottom:12px}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--cyan);background:rgba(34,211,238,.04)}
+.upload-zone.filled{border-color:var(--green);border-style:solid}
+.upload-icon{font-size:28px;margin-bottom:6px}
+.upload-title{font-size:14px;font-weight:800;margin-bottom:3px}
+.upload-hint{font-size:11.5px;color:var(--muted)}
+.upload-status{margin-top:8px;font-size:12px;font-weight:700;color:var(--cyan);min-height:16px}
+.upload-zone input{display:none}
+.preview{margin-top:10px;max-height:90px;overflow-y:auto;padding:10px;background:#000;border:1px solid var(--line);border-radius:10px;font-size:10.5px;font-family:ui-monospace,monospace;color:var(--muted);white-space:pre-wrap}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.setting{background:#000;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.setting label{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:5px}
+.setting select{background:transparent;border:0;color:var(--text);font-size:12.5px;font-family:inherit;outline:none;width:100%;font-weight:600}
+.setting select option{background:#050a14}
+.auto-note{display:block;font-size:10.5px;color:var(--cyan);font-weight:700;margin-top:6px}
+.btn{background:#000;color:var(--text);border:1px solid var(--line2);padding:11px 18px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:800;font-family:inherit;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--cyan);background:rgba(34,211,238,.06)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#04121c;border:0;font-weight:900;box-shadow:0 12px 28px -10px rgba(34,211,238,.5)}
+.btn.danger{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;border:0}
+.btn.big{padding:14px 28px;font-size:14px;margin-left:auto}
+.btn.small{padding:8px 14px;font-size:11.5px;border-radius:8px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.emo-preview{width:84px;height:84px;border-radius:12px;background-color:#0a0f1a;background-size:300% 300%;background-repeat:no-repeat;background-position:0% 50%;border:1px solid var(--line2);display:grid;place-items:center;font-size:9px;color:var(--muted);text-align:center;flex-shrink:0}
+.emotion-box{background:#000;border:1px solid var(--line);border-radius:10px;padding:8px}
+.emotion-box .eb-title{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;text-align:center}
+.emotion-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.emo-btn{font-size:9.5px;font-weight:700;padding:5px 2px;border-radius:6px;background:#050a14;border:1px solid var(--line);color:var(--muted);cursor:pointer;transition:.15s;font-family:inherit}
+.emo-btn:hover{border-color:var(--cyan);color:var(--text)}
+.emo-btn.active{background:rgba(34,211,238,.15);border-color:var(--cyan);color:var(--cyan)}
+.emo-btn.auto{grid-column:span 3;background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3);color:#6ee7b7;font-size:10px}
+.session-grid{flex:1;display:grid;grid-template-columns:minmax(420px,42%) 1fr;gap:0;min-height:0}
+.portrait-pane{position:relative;background:#000;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;overflow:hidden;min-height:0}
+.avatar-frame{width:100%;max-width:380px;aspect-ratio:1/1;border-radius:24px;overflow:hidden;background:#000;border:1px solid var(--line2);box-shadow:0 0 80px -24px var(--cyan);position:relative;flex-shrink:1}
+.avatar-img{width:100%;height:100%;background-size:300% 300%;background-repeat:no-repeat;background-position:0% 50%;transition:background-position .35s cubic-bezier(.4,0,.2,1);background-color:#0a0f1a}
+.avatar-img.empty{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:20px;background-image:none!important}
+.avatar-speak-ring{position:absolute;inset:-2px;border-radius:26px;pointer-events:none;opacity:0;transition:opacity .3s}
+.avatar-frame.speaking .avatar-speak-ring{opacity:1;box-shadow:0 0 0 2px rgba(34,211,238,.5),0 0 40px rgba(34,211,238,.35)}
+.avatar-frame.listening .avatar-speak-ring{opacity:1;box-shadow:0 0 0 2px rgba(16,185,129,.4),0 0 30px rgba(16,185,129,.25)}
+.portrait-meta{margin-top:12px;text-align:center;display:flex;flex-direction:column;gap:8px;width:100%;max-width:380px;padding-top:4px;overflow-y:auto}
+.mood-label{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:3px;color:var(--cyan);transition:color .4s}
+.case-name{font-size:12px;font-weight:800;color:var(--text)}
+.case-hint{font-size:10px;color:var(--muted)}
+.chat-pane{display:flex;flex-direction:column;min-height:0;min-width:0;background:#000}
+.session-top{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+.station-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.timer-wrap{display:flex;flex-direction:column;gap:2px;align-items:flex-end;margin-left:auto}
+.timer-label{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800}
+.timer{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--cyan);font-family:ui-monospace,monospace;line-height:1}
+.timer.warning{color:var(--amber)}
+.timer.critical{color:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.mic-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+.mic-btn{width:50px;height:50px;border-radius:50%;border:1px solid var(--line2);cursor:pointer;font-size:20px;background:#050a14;color:var(--cyan);transition:.25s;flex-shrink:0;display:grid;place-items:center}
+.mic-btn.active{background:var(--cyan);color:#04121c;box-shadow:0 0 0 6px rgba(34,211,238,.15),0 0 30px -4px var(--cyan);animation:micPulse 1.8s infinite}
+@keyframes micPulse{0%{box-shadow:0 0 0 0 rgba(34,211,238,.5),0 0 30px -4px var(--cyan)}70%{box-shadow:0 0 0 16px rgba(34,211,238,0),0 0 30px -4px var(--cyan)}100%{box-shadow:0 0 0 0 rgba(34,211,238,0),0 0 30px -4px var(--cyan)}}
+.mic-btn.off{background:#050a14;color:var(--muted)}
+.mic-mid{display:flex;flex-direction:column;gap:3px;min-width:180px}
+#mic-title{font-size:13px;font-weight:800}
+#mic-sub{font-size:11px;color:var(--muted)}
+.meter-bars{display:flex;gap:2px;height:28px;align-items:flex-end;flex:1;border-radius:6px;padding:3px;overflow:hidden;background:#000;border:1px solid var(--line);min-width:80px}
+.meter-bar{flex:1;min-width:2px;border-radius:2px;background:var(--cyan);height:6%;transition:height .06s ease-out;opacity:.7}
+.meter-bar.hot{background:var(--amber)}
+#meter-status{font-size:10.5px;font-weight:800;padding:5px 11px;border-radius:999px;background:#000;color:var(--muted);white-space:nowrap;border:1px solid var(--line)}
+#meter-status.listening{color:#6ee7b7;border-color:rgba(16,185,129,.35)}
+#meter-status.speaking{color:#a5f3fc;border-color:var(--line2)}
+#meter-status.thinking{color:#c4b5fd;border-color:rgba(139,92,246,.35)}
+.transcript{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.transcript::-webkit-scrollbar{width:6px}
+.transcript::-webkit-scrollbar-thumb{background:rgba(34,211,238,.25);border-radius:6px}
+.bubble{max-width:88%;padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.55;word-wrap:break-word;animation:bubIn .25s}
+@keyframes bubIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.bubble .who{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;opacity:.7;margin-bottom:5px}
+.bubble.student{align-self:flex-end;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);border-bottom-right-radius:4px}
+.bubble.student .who{color:#93c5fd}
+.bubble.patient{align-self:flex-start;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.28);border-bottom-left-radius:4px}
+.bubble.patient .who{color:#a5f3fc}
+.bubble.sys{align-self:center;background:transparent;color:var(--muted);font-size:11px;font-style:italic;border-radius:8px;padding:4px 12px;max-width:92%;border:1px solid var(--line)}
+.bubble.error{color:#fca5a5;border-color:rgba(239,68,68,.3);font-style:normal;font-size:11.5px;text-align:left}
+.bubble.interim{align-self:flex-end;background:rgba(59,130,246,.05);border:1px dashed rgba(59,130,246,.4);border-bottom-right-radius:4px;font-style:italic;color:#93c5fd;opacity:.85}
+.caret{display:inline-block;width:2px;height:1em;background:var(--cyan);animation:caretB .8s steps(1) infinite;vertical-align:-2px;margin-left:2px}
+@keyframes caretB{50%{opacity:0}}
+.manual-entry{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--line);flex-shrink:0;align-items:center}
+.manual-entry input{flex:1;background:#000;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 16px;font-size:13.5px;font-family:inherit;outline:none}
+.manual-entry input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.1)}
+.quick-actions{display:flex;gap:6px;flex-wrap:wrap;padding:0 18px 12px}
+.quick-btn{font-size:11px;font-weight:700;padding:6px 12px;border-radius:999px;background:transparent;color:#a5f3fc;border:1px solid var(--line2);cursor:pointer;transition:.15s}
+.quick-btn:hover{background:rgba(34,211,238,.1);border-color:var(--cyan)}
+.score-hero{display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:20px;background:#000;border:1px solid var(--line);border-radius:14px;margin-bottom:16px}
+.score-circle{width:140px;height:140px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) calc(var(--pct)*1%),rgba(148,163,184,.12) 0);position:relative;flex-shrink:0}
+.score-circle::before{content:"";position:absolute;inset:12px;border-radius:50%;background:var(--panel)}
+.score-value{position:relative;font-size:22px;font-weight:800;text-align:center;color:#fff}
+.score-pct{position:relative;font-size:12px;color:var(--muted);font-weight:800;text-align:center}
+.score-meta{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);flex:1;min-width:220px}
+.score-meta strong{color:var(--text);font-weight:700;min-width:90px;display:inline-block}
+.score-meta span{color:var(--cyan);font-weight:700}
+.rubric-results{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.ri{background:#000;border:1px solid var(--line);border-left:3px solid #64748b;border-radius:10px;padding:13px 15px}
+.ri.full{border-left-color:var(--green)}.ri.partial{border-left-color:var(--amber)}.ri.zero{border-left-color:var(--red)}
+.ri-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.ri-desc{font-size:13.5px;font-weight:600;line-height:1.5;flex:1}
+.ri-score{font-size:13.5px;font-weight:800;padding:4px 11px;border-radius:8px;background:var(--panel);border:1px solid var(--line);flex-shrink:0}
+.ri.full .ri-score{color:#6ee7b7}.ri.partial .ri-score{color:#fcd34d}.ri.zero .ri-score{color:#fca5a5}
+.ri-evidence{margin-top:8px;font-size:12px;color:var(--muted);font-style:italic;line-height:1.5}
+.feedback-box{padding:16px 18px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.25);border-radius:12px;margin-bottom:16px}
+.feedback-box h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#93c5fd;margin-bottom:8px;font-weight:800}
+.feedback-box p{font-size:13.5px;line-height:1.7}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width:1000px){.session-grid{grid-template-columns:1fr;grid-template-rows:auto 1fr}.portrait-pane{border-right:0;border-bottom:1px solid var(--line);padding:12px}.avatar-frame{max-width:240px}}
+@media print{#logbar,#js-status,#toast,.header,#setup-panel,#session-panel{display:none!important}.panel,#results-panel{display:block!important;background:#fff;border:0;color:#000}.ri{background:#fff;border-color:#ccc}.ri-desc{color:#000}.feedback-box{background:#f5f5f5}}
+</style>
+</head>
+<body>
+<div id="logbar">
+  <div class="bar">
+    <b>📋 Log</b><span class="mini" id="log-mini"></span><span class="grow"></span>
+    <button id="log-toggle">show ▾</button>
+  </div>
+  <div id="debug-log"></div>
+</div>
+<div id="js-status">⏳ Loading…</div>
+
+<div class="app">
+  <header class="header">
+    <div class="logo">🧑</div>
+    <div>
+      <h1>OSCE AI Patient — Real Avatar</h1>
+      <div class="sub"><span class="dot"></span> Voicebox MCP (async speak + poll) · 🧠 pre-answered cases · 🎭 emotion box</div>
+    </div>
+  </header>
+
+  <section id="setup-panel" class="panel">
+    <div class="key-section" style="background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(34,211,238,.04));border-color:rgba(139,92,246,.4)">
+      <h3>🔌 Voicebox MCP — async generation polling</h3>
+      <div class="key-hint">
+        Press <b>🔌 Connect</b>. If CORS blocks the POST, open this page from a local server (see log for the exact origin to whitelist).
+      </div>
+      <div class="key-row" style="margin-top:10px">
+        <input type="text" id="vb-url" value="http://127.0.0.1:17493" spellcheck="false">
+        <button class="btn small primary" id="vb-connect">🔌 Connect</button>
+        <button class="btn small" id="vb-diagnose">🔍 Diagnose</button>
+        <span class="key-status" id="vb-status">Not connected</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+        <div class="setting" style="flex:1;min-width:190px"><label>♀ Voice (profile)</label><div style="display:flex;gap:6px"><select id="vb-female-voice"></select><button class="btn small" id="vb-test-f">▶</button></div></div>
+        <div class="setting" style="flex:1;min-width:190px"><label>♂ Voice (profile)</label><div style="display:flex;gap:6px"><select id="vb-male-voice"></select><button class="btn small" id="vb-test-m">▶</button></div></div>
+      </div>
+      <span class="auto-note" id="voice-note">Voice locks to the patient's gender at session start.</span>
+    </div>
+
+    <div class="key-section">
+      <h3>🔑 Google Gemini API Key (prep · scoring · brain)</h3>
+      <div class="key-row">
+        <input type="password" id="api-key" placeholder="AIzaSy… or AQ.Ab8…" autocomplete="off" spellcheck="false">
+        <button class="btn small" id="verify-key">Verify</button>
+        <span class="key-status" id="key-status">Not set</span>
+      </div>
+      <div class="key-hint"><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--cyan)">Get a key</a> — saved in this browser.</div>
+    </div>
+
+    <div class="key-section" style="background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(34,211,238,.05));border-color:rgba(16,185,129,.26)">
+      <h3 style="color:#6ee7b7">🖼 Avatar Images (3×3 emotion grid)</h3>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        Row-major: <code style="background:#000;padding:2px 6px;border-radius:4px;color:#a5f3fc">Happy · Sad · Angry / Calm · Worried · Nervous / Depressed · In Pain · Proud</code>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn small" id="upload-male-sprite">♂ Upload male grid</button>
+        <button class="btn small" id="upload-female-sprite">♀ Upload female grid</button>
+        <button class="btn small" id="clear-sprites" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#fca5a5">Clear</button>
+      </div>
+      <input type="file" id="male-sprite-input" accept="image/*" style="display:none">
+      <input type="file" id="female-sprite-input" accept="image/*" style="display:none">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-top:12px;flex-wrap:wrap">
+        <div class="emo-preview" id="emo-preview">upload<br>a grid</div>
+        <div class="emotion-box" style="flex:1;min-width:230px">
+          <div class="eb-title">Expression preview — click to test cells</div>
+          <div class="emotion-grid" id="emotion-grid-setup"></div>
+        </div>
+      </div>
+      <span class="auto-note" id="sprite-note">No sprites loaded</span>
+    </div>
+
+    <h2><span class="num">1</span> Patient Case</h2>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md">
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Drop case file or click</div>
+      <div class="upload-hint">PDF · DOCX · TXT · MD — prepped bank is cached per case</div>
+      <div class="upload-status" id="upload-status"></div>
+    </div>
+    <div class="preview hidden" id="file-preview"></div>
+    <div id="understand-card" class="hidden" style="background:#000;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:12px;padding:14px 16px;margin-bottom:10px"></div>
+
+    <h2 style="margin-top:16px"><span class="num">2</span> Session Settings</h2>
+    <div class="settings">
+      <div class="setting"><label>Role</label>
+        <select id="user-role"><option value="pharmacist" selected>Pharmacist 💊</option><option value="doctor">Doctor 🩺</option><option value="nurse">Nurse 💉</option></select></div>
+      <div class="setting"><label>Time limit</label>
+        <select id="time-limit"><option value="5">5 min</option><option value="10" selected>10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
+      <div class="setting"><label>Accent</label>
+        <select id="mic-lang"><option value="en-US" selected>American</option><option value="en-GB">British</option><option value="en-IN">Indian</option><option value="en-AU">Australian</option></select></div>
+      <div class="setting"><label>Patient gender</label>
+        <select id="voice-gender"><option value="auto" selected>Auto from case</option><option value="male">Male</option><option value="female">Female</option></select></div>
+      <div class="setting"><label>Voice output</label>
+        <select id="tts-mode"><option value="on" selected>On</option><option value="off">Silent</option></select></div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px">
+      <button id="load-demo-btn" class="btn">📄 Load Demo</button>
+      <button id="prep-btn" class="btn" disabled>🧠 Prepare case</button>
+      <button id="start-btn" class="btn primary big" disabled>▶ Start Session</button>
+    </div>
+    <div id="status-message" style="margin-top:12px;font-size:12.5px;color:var(--muted);min-height:18px;line-height:1.55"></div>
+  </section>
+
+  <section id="session-panel" class="panel hidden">
+    <div class="session-grid">
+      <div class="portrait-pane">
+        <div class="avatar-frame" id="avatar-frame">
+          <div class="avatar-img empty" id="avatar-img">Upload emotion grids in settings</div>
+          <div class="avatar-speak-ring"></div>
+        </div>
+        <div class="portrait-meta">
+          <div class="mood-label" id="mood-label">Calm</div>
+          <div class="case-name" id="case-mini">—</div>
+          <div class="case-hint" id="gender-note">Ready when you are.</div>
+          <div class="emotion-box">
+            <div class="eb-title">Expression — click to pin, ⟳ for auto</div>
+            <div class="emotion-grid" id="emotion-grid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-pane">
+        <div class="session-top">
+          <span class="station-name" id="station-name">—</span>
+          <div class="timer-wrap"><div class="timer-label">Time</div><div class="timer" id="timer">10:00</div></div>
+          <button id="pause-btn" class="btn small">⏸</button>
+          <button id="end-btn" class="btn small danger">■ End</button>
+        </div>
+        <div class="mic-row" id="mic-row">
+          <button class="mic-btn" id="mic-btn">🎤</button>
+          <div class="mic-mid">
+            <span id="mic-title" style="font-weight:800">Listening</span>
+            <span id="mic-sub">Speak — your words appear live</span>
+          </div>
+          <div class="meter-bars" id="meter-bars"></div>
+          <span id="meter-status" class="listening">Ready</span>
+        </div>
+        <div class="transcript" id="transcript"></div>
+        <div class="quick-actions" id="quick-actions">
+          <span class="quick-btn" data-text="Hello doctor">👋 Hello</span>
+          <span class="quick-btn" data-text="What medications do you take?">💊 Meds</span>
+          <span class="quick-btn" data-text="Do you have any side effects?">⚠️ Side effects</span>
+          <span class="quick-btn" data-text="How often do you take them?">🕐 Frequency</span>
+        </div>
+        <div class="manual-entry">
+          <input id="manual-input" placeholder="Or type your question…" autocomplete="off">
+          <button id="manual-send" class="btn">Send</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="results-panel" class="panel hidden">
+    <h2><span class="num">3</span> Score Report</h2>
+    <div class="score-hero">
+      <div class="score-circle" id="score-circle" style="--pct:0"><div><div class="score-value" id="total-score">0 / 0</div><div class="score-pct" id="percentage">0%</div></div></div>
+      <div class="score-meta">
+        <div><strong>Station:</strong> <span id="report-case">—</span></div>
+        <div><strong>Duration:</strong> <span id="report-duration">—</span></div>
+        <div><strong>Ended:</strong> <span id="report-reason">—</span></div>
+      </div>
+    </div>
+    <div class="rubric-results" id="rubric-results"></div>
+    <div class="feedback-box"><h3>Examiner Feedback</h3><p id="feedback"></p></div>
+    <div class="actions">
+      <button id="restart-btn" class="btn primary">↻ New Session</button>
+      <button id="download-btn" class="btn">⬇ Transcript</button>
+      <button id="print-btn" class="btn">🖨️ Print / PDF</button>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+var GEMINI_BASE='https://generativelanguage.googleapis.com/v1beta';
+var MIN_API_GAP=250;
+var VB_SPEAK='voicebox.speak';
+var VB_PROFILES='voicebox.list_profiles';
+
+var EMOTION_POS={happy:'0% 0%',sad:'50% 0%',angry:'100% 0%',calm:'0% 50%',worried:'50% 50%',nervous:'100% 50%',depressed:'0% 100%',pain:'50% 100%',proud:'100% 100%'};
+var EMOTION_LABEL={happy:'Happy',sad:'Sad',angry:'Angry',calm:'Calm',worried:'Worried',nervous:'Nervous',depressed:'Depressed',pain:'In Pain',proud:'Proud'};
+var EMOTION_COLOR={happy:'#10b981',sad:'#60a5fa',angry:'#ef4444',calm:'#22d3ee',worried:'#f59e0b',nervous:'#f59e0b',depressed:'#94a3b8',pain:'#ef4444',proud:'#10b981'};
+var EMOTION_ORDER=['happy','sad','angry','calm','worried','nervous','depressed','pain','proud'];
+
+function $(id){return document.getElementById(id);}
+function setStatus(m,c){var s=$('js-status');if(s){s.textContent=m;if(c)s.style.background=c;}}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function clampN(x,a,b){return Math.max(a,Math.min(b,x));}
+function safeMsg(e){if(!e)return'unknown';if(typeof e==='string')return e;if(e.message)return String(e.message);if(e.name)return String(e.name);try{return String(e);}catch(_){return'unknown';}}
+function isAbortError(m){return /abort|signal is aborted|without reason/i.test(String(m||''));}
+function cleanKey(raw){return String(raw||'').replace(/[\u0000-\u001F\u007F\u200B-\u200F\u2028-\u202F\u2060\uFEFF\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g,'').replace(/\s+/g,'').trim();}
+function sanitizeForTTS(t){return String(t||'').replace(/[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F2FF}\u{2600}-\u{27BF}]/gu,'').replace(/[\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'').replace(/\s+/g,' ').trim();}
+function djb2(s){var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return(h>>>0).toString(36);}
+function dbg(msg,kind){
+  var el=$('debug-log');if(!el)return;
+  var line=document.createElement('div');line.className=kind||'info';
+  line.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
+  el.appendChild(line);
+  while(el.children.length>600)el.removeChild(el.firstChild);
+  el.scrollTop=el.scrollHeight;
+  var mini=$('log-mini');if(mini)mini.textContent=msg.slice(0,110);
+  try{console.log('[EMO]',msg);}catch(_){}}
+window.addEventListener('error',function(e){
+  dbg('Global: '+safeMsg(e),'err');
+  var s=$('js-status');
+  if(s&&/Loading/.test(s.textContent))setStatus('⚠ Startup error: '+safeMsg(e),'linear-gradient(90deg,#ef4444,#b91c1c)');});
+window.addEventListener('unhandledrejection',function(e){var m=safeMsg(e.reason);if(isAbortError(m))return;dbg('Unhandled: '+m,'err');});
+document.addEventListener('pointerdown',function(){ensureAudioCtx();},{capture:true});
+
+function validatePatientOpening(line){
+  if(!line||typeof line!=='string')return null;
+  var t=line.trim();if(t.length<4||t.length>400)return null;
+  var doc=[/\bnice to meet you\b/i,/\bhow have you been\b/i,/\bhow are you feeling since\b/i,/\bi understand you (were|that)\b/i,/\byou were (recently|admitted|hospitalized)\b/i,/\bi'?d like to review\b/i,/\bwe'?ll review\b/i,/\bwe can review\b/i,/\blet'?s review\b/i,/\btell me about\b/i,/\bcan you tell me\b/i,/\bhow can i help you today\b/i,/\bwhat brings you (in|here)\b/i,/\bwhat can i do for you\b/i,/^(hello|hi|good (morning|afternoon|evening))?\s*(mrs?|ms|miss|mr)\.?\s+[A-Z]/i,/\bmrs?\.?\s+[A-Z][a-z]+\b/,/\bms\.?\s+[A-Z][a-z]+\b/,/\bmr\.?\s+[A-Z][a-z]+\b/,/\bmy name is dr\b/i,/\bi'?m (dr|doctor)\b/i,/\bi am (dr|doctor)\b/i,/\bthe pharmacist\b/i];
+  for(var i=0;i<doc.length;i++){if(doc[i].test(t))return null;}
+  return t;}
+
+var state={
+  running:false,paused:false,timeLimitSec:600,timeRemaining:600,timerId:null,startedAt:0,
+  userRole:'pharmacist',micLang:'en-US',
+  effectiveGender:'female',caseGender:null,sessionVoiceGender:'',sessionVoiceName:'',
+  manualEmotion:false,micUserMuted:false,
+  ttsMode:'on',geminiKey:'',resolvedModel:'',
+  vb:{mode:'idle',base:'',connecting:false,connectPromise:null,mcpOk:false,sid:'',tools:null,profiles:[]},
+  vbVoiceFemale:'',vbVoiceMale:'',
+  prep:{status:'idle',qaBank:[],forDoc:''},runtimeBank:[],
+  caseTitle:'',caseScenario:'',openingLine:'',fallbackResponse:'',
+  rubric:[],rubricMax:0,caseMeds:[],rawDoc:'',keyVerified:false,
+  audioCtx:null,micSrcNode:null,meterRaf:null,meterBars:[],
+  recognition:null,recognitionActive:false,interimEl:null,sendDebounce:null,_recRestart:null,
+  emotion:'calm',avatarMale:'',avatarFemale:'',
+  turns:[],responding:false,aiSpeaking:false,replyToken:0,ignoreUntil:0,
+  speakSeq:0,playCtx:null,curSrc:null,curEl:null,
+  parseToken:0,_errShown:0,_srWarned:false,_vbBackT:false,
+  lastApiCall:0,rateLimitUntil:0,workingConfigIdx:-1,lastScore:null};
+
+/* ============ MIC ============ */
+var micStream=null,micPromise=null;
+function micIsLive(){if(!micStream)return false;try{return micStream.getAudioTracks().some(function(t){return t.readyState==='live'&&t.enabled;});}catch(e){return false;}}
+async function ensureMic(){
+  if(micIsLive())return micStream;
+  if(micPromise)return micPromise;
+  micPromise=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})
+    .then(function(s){micStream=s;dbg('Mic acquired','ok');return s;})
+    .catch(function(e){dbg('Mic error: '+safeMsg(e),'err');throw e;})
+    .finally(function(){micPromise=null;});
+  return micPromise;}
+
+/* ============ AVATAR + EMOTION BOX ============ */
+function highlightEmotion(em){
+  ['emotion-grid','emotion-grid-setup'].forEach(function(id){
+    var grid=$(id);if(!grid)return;
+    var btns=grid.querySelectorAll('.emo-btn');
+    for(var i=0;i<btns.length;i++){
+      var b=btns[i];
+      if(b.id==='emo-auto')continue;
+      if(b.getAttribute('data-emotion')===em)b.classList.add('active');
+      else b.classList.remove('active');}});
+}
+function updateAutoBtn(){
+  var a=$('emo-auto');if(!a)return;
+  a.textContent=state.manualEmotion?'✋ Manual — tap ⟳ for auto':'⟳ Auto (follow the conversation)';}
+function lastPatientLine(){
+  for(var i=state.turns.length-1;i>=0;i--)if(state.turns[i].who==='patient')return state.turns[i].text;
+  return '';}
+function setEmotion(em){
+  if(!EMOTION_POS[em])em='calm';
+  state.emotion=em;
+  var el=$('avatar-img');
+  if(el&&!el.classList.contains('empty'))el.style.backgroundPosition=EMOTION_POS[em];
+  var l=$('mood-label');
+  if(l){l.textContent=EMOTION_LABEL[em]||'Calm';l.style.color=EMOTION_COLOR[em]||'#22d3ee';}
+  highlightEmotion(em);
+  updateEmoPreview();}
+function buildEmotionGrid(containerId,withAuto){
+  var grid=$(containerId);
+  if(!grid||grid._built)return;
+  grid._built=true;
+  EMOTION_ORDER.forEach(function(em){
+    var b=document.createElement('button');
+    b.className='emo-btn';b.type='button';
+    b.setAttribute('data-emotion',em);
+    b.textContent=EMOTION_LABEL[em];
+    b.addEventListener('click',function(){
+      if(withAuto){state.manualEmotion=true;updateAutoBtn();}
+      setEmotion(em);});
+    grid.appendChild(b);});
+  if(withAuto){
+    var auto=document.createElement('button');
+    auto.className='emo-btn auto';auto.type='button';auto.id='emo-auto';
+    auto.textContent='⟳ Auto (follow the conversation)';
+    auto.addEventListener('click',function(){
+      state.manualEmotion=false;
+      setEmotion(detectEmotionFromText(lastPatientLine())||'calm');
+      updateAutoBtn();});
+    grid.appendChild(auto);}}
+function updateEmoPreview(){
+  var el=$('emo-preview');if(!el)return;
+  var mode=$('voice-gender')?$('voice-gender').value:'auto';
+  var g=(mode==='auto')?(state.caseGender||'female'):mode;
+  var url=g==='male'?state.avatarMale:state.avatarFemale;
+  if(!url){el.style.backgroundImage='none';el.innerHTML='upload<br>a grid';}
+  else{el.textContent='';el.style.backgroundImage='url("'+url+'")';el.style.backgroundPosition=EMOTION_POS[state.emotion]||EMOTION_POS.calm;}}
+function setAvatarVisual(c,on){var f=$('avatar-frame');if(!f)return;if(on)f.classList.add(c);else f.classList.remove(c);}
+function refreshAvatar(){
+  var el=$('avatar-img');if(!el)return;
+  var url=state.effectiveGender==='male'?state.avatarMale:state.avatarFemale;
+  if(!url){el.classList.add('empty');el.style.backgroundImage='none';el.textContent='No '+(state.effectiveGender==='male'?'♂ male':'♀ female')+' grid — upload in settings';}
+  else{el.classList.remove('empty');el.style.backgroundImage='url("'+url+'")';el.textContent='';el.style.backgroundPosition=EMOTION_POS[state.emotion]||EMOTION_POS.calm;}
+  updateEmoPreview();}
+function detectEmotionFromText(t){var l=(t||'').toLowerCase();
+  if(/\b(in pain|hurts?|aching|sharp|throbbing|dizzy)\b/.test(l))return'pain';
+  if(/\b(angry|mad|upset|furious|frustrated)\b/.test(l))return'angry';
+  if(/\b(scared|afraid|nervous|panic|terrified|anxious)\b/.test(l))return'nervous';
+  if(/\b(worried|concern|not sure|maybe something|hoping)\b/.test(l))return'worried';
+  if(/\b(depressed|hopeless|no energy|empty)\b/.test(l))return'depressed';
+  if(/\b(proud|achieved|succeeded)\b/.test(l))return'proud';
+  if(/\b(happy|great|wonderful|glad|thank you|thanks|better|relieved)\b/.test(l))return'happy';
+  if(/\b(sad|miss|lonely|crying|tears|unhappy)\b/.test(l))return'sad';
+  return'calm';}
+function detectCaseGender(t){t=' '+String(t||'').toLowerCase()+' ';
+  var gm=t.match(/\bgender\s*[:\-]?\s*(male|female)\b/);if(gm)return gm[1];
+  if(/\bmrs\.?\b/.test(t)||/\bms\.?\b/.test(t)||/\bmiss\b/.test(t))return'female';
+  if(/\bmr\.?\b/.test(t))return'male';
+  var f=0,m=0;
+  var fw=[/\bwoman\b/,/\bfemale\b/,/\blady\b/,/\bwife\b/,/\bmother\b/,/\bgrandmother\b/,/\bsister\b/,/\bdaughter\b/,/\baunt\b/];
+  var mw=[/\bman\b/,/\bmale\b/,/\bgentleman\b/,/\bhusband\b/,/\bfather\b/,/\bgrandfather\b/,/\bbrother\b/,/\bson\b/,/\buncle\b/];
+  for(var i=0;i<fw.length;i++)f+=(t.match(new RegExp(fw[i].source,'g'))||[]).length;
+  for(var j=0;j<mw.length;j++)m+=(t.match(new RegExp(mw[j].source,'g'))||[]).length;
+  f+=Math.min(6,(t.match(/\b(she|her|hers)\b/g)||[]).length);
+  m+=Math.min(6,(t.match(/\b(he|him|his)\b/g)||[]).length);
+  if(f===0&&m===0)return null;
+  if(f>m)return'female';if(m>f)return'male';return null;}
+
+function drainSentences(p){var s=p.s,out=[],last=0;
+  for(var i=0;i<s.length;i++){var c=s.charAt(i);
+    if(c==='.'||c==='!'||c==='?'||c==='…'){if(i-last+1>=12){var seg=s.slice(last,i+1).trim();if(seg)out.push(seg);last=i+1;}}}
+  p.s=s.slice(last);return out;}
+function splitSentences(t){var p={s:String(t||'')};var out=drainSentences(p);var r=p.s.trim();if(r)out.push(r);return out;}
+
+/* ============ FIXED: extractJSON — prefer array when it starts first ============ */
+function extractJSON(s){
+  s=String(s||'').replace(/```json/gi,'```');
+  var a1=s.indexOf('{'),b1=s.lastIndexOf('}');
+  var a2=s.indexOf('['),b2=s.lastIndexOf(']');
+  var a,b;
+  if(a2!==-1&&(a1===-1||a2<a1)){a=a2;b=b2;}
+  else if(a1!==-1){a=a1;b=b1;}
+  else return null;
+  if(a===-1||b<=a)return null;
+  try{return JSON.parse(s.slice(a,b+1));}catch(e){return null;}}
+
+/* ============ 🧠 CASE PREP (+ cache) ============ */
+var STOP={};(function(){'the a an do does did you your i is are was were have has had any and or of to in on for with what when how can could would me my it that this be been at as if so about tell please much many often long feel feeling getting get there their they them he she his her we us our who whom which will shall may might must also just really very some more most other into over under then than too only own same such no not now here where why all both each few'.split(' ').forEach(function(w){STOP[w]=1;});})();
+function tokenize(s){return String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(function(w){return w.length>2&&!STOP[w];});}
+function answerFromBank(userText){
+  var tokens=tokenize(userText);if(!tokens.length)return null;
+  var banks=[state.prep.qaBank,state.runtimeBank],best=null,bestScore=0;
+  for(var p=0;p<banks.length;p++){
+    var bank=banks[p];
+    for(var i=0;i<bank.length;i++){
+      var e=bank[i],hit=0;
+      for(var t=0;t<tokens.length;t++){
+        var tok=tokens[t];
+        if(e.keys.indexOf(tok)>-1){hit+=2;continue;}
+        for(var k=0;k<e.keys.length;k++){
+          var kk=e.keys[k];
+          if(kk.indexOf(tok)===0||tok.indexOf(kk)===0){hit+=1;break;}}}
+      var score=Math.max(hit/(tokens.length*2),Math.min(1,hit/6));
+      if(score>bestScore){bestScore=score;best=e.a;}}}
+  return bestScore>=0.5?best:null;}
+function addToRuntimeBank(q,a){if(!q||!a)return;
+  for(var i=0;i<state.runtimeBank.length;i++)if(state.runtimeBank[i].q.toLowerCase()===q.toLowerCase())return;
+  state.runtimeBank.push({q:q,a:a,keys:tokenize(q)});
+  if(state.runtimeBank.length>30)state.runtimeBank.shift();}
+function prepCacheKey(){return'osce_prep_v3_'+djb2(state.rawDoc.slice(0,20000));}
+function savePrepCache(){
+  try{localStorage.setItem(prepCacheKey(),JSON.stringify({b:state.prep.qaBank.map(function(e){return[e.q,e.a];}),g:state.caseGender,o:state.openingLine}));}catch(_){}}
+function loadPrepCache(){
+  try{var raw=localStorage.getItem(prepCacheKey());if(!raw)return false;
+    var j=JSON.parse(raw);if(!j||!j.b||!j.b.length)return false;
+    state.prep.qaBank=j.b.map(function(p){return{q:p[0],a:p[1],keys:tokenize(p[0])};});
+    if(j.g)state.caseGender=j.g;
+    if(j.o)state.openingLine=j.o;
+    state.prep.status='ready';state.prep.forDoc=state.rawDoc;
+    return true;}catch(_){return false;}}
+async function prepareCase(){
+  if(!state.keyVerified){toast('Verify the Gemini key first — prep uses it');return;}
+  if(!state.rawDoc||state.prep.status==='working')return;
+  if(state.prep.status==='ready'&&state.prep.forDoc===state.rawDoc){toast('Already prepared — '+state.prep.qaBank.length+' instant answers');return;}
+  state.prep.status='working';updatePrepUI();updateCaseUI();
+  dbg('🧠 Studying the case…','info');
+  var sys='You prepare OSCE role-play data. Output ONLY valid JSON. No markdown, no fences, no commentary.';
+  var user='PATIENT CASE:\n'+state.caseScenario.slice(0,9000)+
+    '\n\nReturn exactly: {"gender":"male|female","greeting":"<one first-person opening sentence, under 22 words>","qa":[{"q":"likely clinician question","a":"patient spoken answer, 1-2 sentences, under 30 words, first person, layperson words"}]}\n'+
+    'Include 30 qa pairs covering: presenting complaint (onset/location/severity/character/timing/aggravating+relieving/associated symptoms), red-flag probes (dizziness, fainting, breathlessness, radiation, sweating), EVERY medication (name, dose, schedule, adherence, side effects, why), OTC/herbal, allergies, smoking, alcohol, past history, family history, daily-life impact, feelings, and 3 fillers ("tell me more","how does that affect you","what happened next"). Never reveal info the case says to withhold until asked. Stay in character.';
+  try{
+    var out=await geminiChat([{role:'user',content:user}],sys,3000);
+    var j=extractJSON(out);
+    if(!j||!j.qa||!j.qa.length)throw new Error('prep JSON invalid');
+    var bank=[];
+    for(var i=0;i<j.qa.length;i++){
+      var qa=j.qa[i];
+      if(!qa||!qa.q||!qa.a)continue;
+      bank.push({q:String(qa.q).slice(0,300),a:String(qa.a).slice(0,300),keys:tokenize(qa.q)});}
+    if(!bank.length)throw new Error('no usable Q&A');
+    state.prep.qaBank=bank;
+    if(j.gender&&!state.caseGender){
+      var gl=String(j.gender).toLowerCase();
+      state.caseGender=gl.indexOf('female')>-1?'female':(gl.indexOf('male')===0?'male':state.caseGender);}
+    if(j.greeting&&validatePatientOpening(j.greeting)){
+      state.openingLine=String(j.greeting).trim();
+      state.fallbackResponse=state.openingLine;}
+    state.prep.status='ready';state.prep.forDoc=state.rawDoc;
+    savePrepCache();
+    dbg('🧠 Prepared — '+bank.length+' instant answers (cached)','ok');
+    toast('🧠 Case studied — '+bank.length+' instant answers ready');
+  }catch(e){
+    state.prep.status='failed';
+    dbg('Prep failed: '+safeMsg(e)+' — sessions still work','warn');
+    toast('Prep failed — sessions still work');}
+  updatePrepUI();updateCaseUI();updateStartBtn();}
+function updatePrepUI(){var b=$('prep-btn');if(!b)return;
+  if(state.prep.status==='working'){b.disabled=true;b.textContent='🧠 Studying…';}
+  else if(state.prep.status==='ready'){b.disabled=true;b.textContent='🧠 Prepared ('+state.prep.qaBank.length+')';}
+  else{b.disabled=!state.rawDoc;b.textContent='🧠 Prepare case';}}
+
+/* ============ GEMINI ============ */
+function apiUrl(p){var k=cleanKey(state.geminiKey);return GEMINI_BASE+p+(p.indexOf('?')===-1?'?':'&')+'key='+k;}
+async function apiFetch(path,opts,timeoutMs){
+  var now=Date.now(),wait=MIN_API_GAP-(now-state.lastApiCall);
+  if(wait>0)await sleep(wait);
+  if(state.rateLimitUntil>Date.now())await sleep(state.rateLimitUntil-Date.now());
+  state.lastApiCall=Date.now();
+  var url=apiUrl(path),ctrl=new AbortController();
+  var t=setTimeout(function(){try{ctrl.abort();}catch(_){}},timeoutMs||15000);
+  var o={signal:ctrl.signal,method:(opts&&opts.method)||'GET'};
+  if(opts&&opts.body){o.method='POST';o.body=opts.body;o.headers={'Content-Type':'application/json'};}
+  try{return await fetch(url,o);}
+  catch(e){
+    if(e&&(e.name==='AbortError'||isAbortError(e.message))){var ab=new Error('aborted');ab.aborted=true;throw ab;}
+    if(e&&e.name==='TypeError')throw new Error('Browser blocked fetch: '+safeMsg(e));
+    throw e;
+  }finally{clearTimeout(t);}}
+function scoreModel(n){var s=0;
+  if(/flash-lite/i.test(n))s+=1400;else if(/flash/i.test(n))s+=1000;
+  if(/\bpro\b/i.test(n))s+=300;
+  var m=n.match(/gemini-(\d+)(?:\.(\d+))?/);
+  if(m)s+=(parseInt(m[1],10)||0)*80+(parseInt(m[2]||'0',10)||0)*8;
+  if(/latest/i.test(n))s+=20;
+  if(/preview|exp/i.test(n))s-=10;
+  if(/vision|embedding|aqa|imagen|veo|gemma|learnlm/i.test(n))s-=5000;
+  return s;}
+async function verifyAndDiscover(){
+  if(!state.geminiKey)throw new Error('No key');
+  state.rateLimitUntil=0;
+  var c=cleanKey(state.geminiKey);
+  if(c!==state.geminiKey){state.geminiKey=c;var i=$('api-key');if(i)i.value=c;}
+  var r;
+  try{r=await apiFetch('/models',{method:'GET'},12000);}
+  catch(e){if(e&&e.aborted)throw new Error('Request aborted');throw new Error('Network error: '+safeMsg(e));}
+  if(!r.ok){var et='';try{et=await r.text();}catch(_){}throw new Error('Key rejected (HTTP '+r.status+')');}
+  var data;try{data=await r.json();}catch(e){throw new Error('Bad JSON');}
+  var models=(data.models||[]).map(function(m){return{name:(m.name||'').replace(/^models\//,''),methods:m.supportedGenerationMethods||[]};});
+  var llm=models.filter(function(m){return m.methods.indexOf('generateContent')!==-1&&/^gemini-/.test(m.name)&&!/tts|embedding|aqa|imagen|veo|gemma/i.test(m.name);});
+  llm.sort(function(a,b){return scoreModel(b.name)-scoreModel(a.name);});
+  if(!llm.length)throw new Error('No chat models');
+  state.resolvedModel=llm[0].name;
+  dbg('Gemini brain: '+state.resolvedModel,'ok');
+  state.keyVerified=true;
+  return{llm:state.resolvedModel,count:models.length};}
+function buildChatStrategies(model,maxTokens){
+  var vm=model.match(/gemini-(\d+)(?:\.(\d+))?/);
+  var think=false;
+  if(vm){
+    var maj=parseInt(vm[1],10)||0;
+    var min=parseInt(vm[2]||'0',10)||0;
+    think=maj>2||(maj===2&&min>=5);}
+  var s=[];
+  if(think)s.push({name:'full+no-thinking',gen:{temperature:.85,maxOutputTokens:maxTokens||140,topP:.92,thinkingConfig:{thinkingBudget:0}},useSystem:true});
+  s.push({name:'full',gen:{temperature:.85,maxOutputTokens:maxTokens||140,topP:.92},useSystem:true});
+  s.push({name:'bare',gen:{temperature:.85,maxOutputTokens:maxTokens||140},useSystem:true});
+  s.push({name:'minimum',gen:{maxOutputTokens:maxTokens||140},useSystem:false});
+  return s;}
+function buildContents(messages){
+  var c=[];
+  for(var i=0;i<messages.length;i++){
+    var m=messages[i];
+    if(!m)continue;
+    var t=String(m.content||'').trim();
+    if(!t)continue;
+    c.push({role:m.role==='assistant'?'model':'user',parts:[{text:t}]});}
+  if(c.length&&c[0].role==='model')c.unshift({role:'user',parts:[{text:'(The consultation is starting. Respond as the patient.)'}]});
+  return c;}
+async function geminiChat(messages,systemPrompt,maxTokens){
+  var model=state.resolvedModel;if(!model)throw new Error('No model');
+  var contents=buildContents(messages);if(!contents.length)throw new Error('No content');
+  var strats=buildChatStrategies(model,maxTokens);
+  var start=(state.workingConfigIdx>=0&&state.workingConfigIdx<strats.length)?state.workingConfigIdx:0;
+  var lastErr=null;
+  for(var ci=start;ci<strats.length;ci++){
+    var st=strats[ci],body={contents:contents,generationConfig:st.gen};
+    if(st.useSystem&&systemPrompt)body.systemInstruction={parts:[{text:systemPrompt}]};
+    else if(!st.useSystem&&systemPrompt&&contents.length)contents[0].parts[0].text=systemPrompt+'\n\n'+contents[0].parts[0].text;
+    var r;
+    try{r=await apiFetch('/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',body:JSON.stringify(body)},45000);}
+    catch(e){if(e&&e.aborted)throw e;lastErr=e;if(ci<strats.length-1){await sleep(250);continue;}throw e;}
+    if(r.status===429){state.rateLimitUntil=Date.now()+2500;var e4=new Error('HTTP 429');e4.code=429;throw e4;}
+    if(r.ok){
+      var data;try{data=await r.json();}catch(e){throw new Error('Bad JSON');}
+      var cand=data&&data.candidates&&data.candidates[0];
+      var parts=cand&&cand.content&&cand.content.parts;
+      if(!parts)throw new Error('Empty response');
+      var out='';for(var j=0;j<parts.length;j++)if(parts[j].text)out+=parts[j].text;
+      if(!out.trim())throw new Error('Empty text');
+      if(ci!==state.workingConfigIdx){state.workingConfigIdx=ci;dbg('Chat config "'+st.name+'" locked in','ok');}
+      return out;}
+    var et='';try{et=await r.text();}catch(_){}
+    dbg('Chat "'+st.name+'" HTTP '+r.status,'warn');
+    lastErr=new Error('HTTP '+r.status);
+    if(ci<strats.length-1)await sleep(250);}
+  throw lastErr||new Error('All chat strategies failed');}
+async function geminiChatStream(messages,systemPrompt,maxTokens,onSentence){
+  var model=state.resolvedModel;if(!model)throw new Error('No model');
+  var strats=buildChatStrategies(model,maxTokens);
+  var start=(state.workingConfigIdx>=0&&state.workingConfigIdx<strats.length)?state.workingConfigIdx:0;
+  var lastErr=null;
+  for(var ci=start;ci<strats.length;ci++){
+    var st=strats[ci],contents=buildContents(messages),body={contents:contents,generationConfig:st.gen};
+    if(st.useSystem&&systemPrompt)body.systemInstruction={parts:[{text:systemPrompt}]};
+    else if(!st.useSystem&&systemPrompt&&contents.length)contents[0].parts[0].text=systemPrompt+'\n\n'+contents[0].parts[0].text;
+    var now=Date.now(),wait=MIN_API_GAP-(now-state.lastApiCall);
+    if(wait>0)await sleep(wait);
+    if(state.rateLimitUntil>Date.now())await sleep(state.rateLimitUntil-Date.now());
+    state.lastApiCall=Date.now();
+    var emitted=0,full='',pending={s:''},ctrl=new AbortController();
+    var to=setTimeout(function(){try{ctrl.abort();}catch(_){}},30000);
+    try{
+      var res=await fetch(GEMINI_BASE+'/models/'+encodeURIComponent(model)+':streamGenerateContent?alt=sse&key='+cleanKey(state.geminiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctrl.signal});
+      if(res.status===429){var e4=new Error('HTTP 429');e4.code=429;throw e4;}
+      if(!res.ok){var et='';try{et=await res.text();}catch(_){}throw new Error('HTTP '+res.status);}
+      var handle=function(payload){
+        var j=null;try{j=JSON.parse(payload);}catch(_){return;}
+        var c=j&&j.candidates&&j.candidates[0],ps=c&&c.content&&c.content.parts;
+        if(ps){
+          for(var p=0;p<ps.length;p++){
+            if(ps[p]&&ps[p].text){
+              full+=ps[p].text;pending.s+=ps[p].text;
+              var got=drainSentences(pending);
+              for(var g=0;g<got.length;g++){onSentence(got[g],emitted);emitted++;}}}}};
+      if(res.body&&res.body.getReader){
+        var reader=res.body.getReader(),dec=('TextDecoder'in window)?new TextDecoder():null,buf='';
+        while(true){
+          var rd=await reader.read();
+          if(rd.done)break;
+          var txt=dec?dec.decode(rd.value,{stream:true}):'';
+          if(!dec)for(var b=0;b<rd.value.length;b++)txt+=String.fromCharCode(rd.value[b]);
+          buf+=txt;
+          var lines=buf.split('\n');buf=lines.pop()||'';
+          for(var li=0;li<lines.length;li++){
+            var ln=lines[li].trim();
+            if(ln.slice(0,5)==='data:')handle(ln.slice(5).trim());}}
+        var tail=buf.trim();
+        if(tail.slice(0,5)==='data:')handle(tail.slice(5).trim());
+      }else{
+        var all=await res.text(),ls=all.split('\n');
+        for(var lj=0;lj<ls.length;lj++){
+          var ln2=ls[lj].trim();
+          if(ln2.slice(0,5)==='data:')handle(ln2.slice(5).trim());}}
+      var rest=pending.s.trim();
+      if(rest){onSentence(rest,emitted);emitted++;}
+      if(!full.trim())throw new Error('Empty stream');
+      if(ci!==state.workingConfigIdx)state.workingConfigIdx=ci;
+      clearTimeout(to);
+      return full;
+    }catch(e){
+      clearTimeout(to);
+      if(e&&e.code===429)throw e;
+      if(e&&(e.aborted||e.name==='AbortError'||isAbortError(e.message))){
+        if(emitted>0)return full;
+        var ab=new Error('aborted');ab.aborted=true;throw ab;}
+      if(emitted>0)return full;
+      lastErr=e;await sleep(200);}}
+  throw lastErr||new Error('Streaming failed');}
+
+/* ============================================================
+   🔌 VOICEBOX MCP — async speak: call → poll → play
+   ============================================================ */
+function vbBase(){return state.vb.base;}
+function vbSetMode(mode,note,manual){
+  var changed=state.vb.mode!==mode;
+  state.vb.mode=mode;
+  var el=$('vb-status');
+  var label={idle:'Not connected',pending:'Connecting…',down:'✗ Not running',ready:'✓ Voicebox (MCP)',noapi:'⚠ MCP error — see log'}[mode]||mode;
+  if(el){
+    el.textContent=note||label;
+    el.className='key-status '+(mode==='ready'?'ok':mode==='down'?'err':'pending');}
+  setVoiceNote();
+  if(manual||changed)dbg('Voicebox: '+(note||label),mode==='ready'?'ok':mode==='down'?'err':'info');}
+async function probeAlive(base,timeoutMs){
+  var ctrl=new AbortController();
+  var t=setTimeout(function(){try{ctrl.abort();}catch(_){}},timeoutMs||1200);
+  try{await fetch(base+'/',{mode:'no-cors',cache:'no-store',signal:ctrl.signal});return true;}
+  catch(e){return false;}
+  finally{clearTimeout(t);}}
+
+/* ============ FIXED: mcpPost — header ladder, robust CORS handling ============ */
+async function mcpPost(obj){
+  var wantId=(obj&&obj.id!==undefined&&obj.id!==null)?obj.id:null;
+  var origin=(function(){try{return location.origin||'null';}catch(_){return'null';}})();
+
+  var variants=[
+    {'Content-Type':'application/json'},
+    {'Content-Type':'application/json','Accept':'application/json, text/event-stream'},
+    {'Content-Type':'application/json','Accept':'application/json, text/event-stream','X-Voicebox-Client-Id':'osce-patient'}
+  ];
+
+  var lastErr=null;
+  for(var vi=0;vi<variants.length;vi++){
+    var h=variants[vi];
+    if(state.vb.sid&&vi>0)h['mcp-session-id']=state.vb.sid;
+
+    var r;
+    try{
+      r=await fetch(vbBase()+'/mcp',{
+        method:'POST',
+        headers:h,
+        body:JSON.stringify(obj),
+        mode:'cors',
+        credentials:'omit',
+        cache:'no-store'
+      });
+    }catch(e){
+      lastErr=e;
+      dbg('mcpPost variant '+(vi+1)+'/'+variants.length+' → '+safeMsg(e),'warn');
+      continue;
+    }
+
+    var sid=r.headers.get('mcp-session-id');
+    if(sid)state.vb.sid=sid;
+
+    if(!r.ok){
+      lastErr=new Error('MCP HTTP '+r.status);
+      dbg('mcpPost variant '+(vi+1)+' → HTTP '+r.status,'warn');
+      continue;
+    }
+
+    var ct=(r.headers.get('content-type')||'').toLowerCase();
+    var txt=await r.text();
+    if(vi>0)dbg('mcpPost ✓ succeeded with variant '+(vi+1)+'/'+variants.length,'ok');
+
+    if(ct.indexOf('text/event-stream')>-1){
+      var lines=txt.split(/\r?\n/),best=null,last=null;
+      for(var i=0;i<lines.length;i++){
+        var ln=lines[i].trim();
+        if(ln.indexOf('data:')!==0)continue;
+        var d=ln.slice(5).trim();
+        if(!d||d==='[DONE]')continue;
+        last=d;
+        try{
+          var j=JSON.parse(d);
+          if(wantId!==null&&j&&j.id===wantId){best=d;break;}
+        }catch(_){}
+      }
+      var pick=best||last;
+      if(!pick)return null;
+      try{return JSON.parse(pick);}catch(e){return null;}
+    }
+    try{return JSON.parse(txt);}catch(e){return null;}
+  }
+
+  dbg('── POST /mcp rejected by every header variant ──','err');
+  dbg('Your page origin is:  '+origin,'info');
+  dbg('Voicebox must reply with  Access-Control-Allow-Origin: '+origin,'info');
+  dbg('and allow headers: Content-Type, Accept, X-Voicebox-Client-Id, mcp-session-id','info');
+  dbg('and allow method: POST (OPTIONS preflight must return 204)','info');
+  dbg('Tip: open this page from a local HTTP server, not file://','info');
+  var e=new Error('Failed to fetch (CORS) — Voicebox must allow origin '+origin);
+  e.cors=true;
+  throw e;
+}
+
+async function mcpInit(){
+  state.vb.sid='';
+  var res=await mcpPost({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'osce-patient',version:'1.0'}}});
+  if(!res||res.error)throw new Error('initialize: '+(res?JSON.stringify(res.error).slice(0,160):'no response'));
+  await mcpPost({jsonrpc:'2.0',method:'notifications/initialized'});
+  return true;}
+async function mcpToolsList(){
+  var res=await mcpPost({jsonrpc:'2.0',id:2,method:'tools/list'});
+  if(res&&res.error)throw new Error('tools/list: '+JSON.stringify(res.error).slice(0,160));
+  return (res&&res.result&&res.result.tools)?res.result.tools:null;}
+
+async function mcpCall(name,args,retried){
+  var res=await mcpPost({jsonrpc:'2.0',id:(Date.now()%1000000)+3,method:'tools/call',params:{name:name,arguments:args||{}}});
+  if(!res)return null;
+  if(res.error){
+    var msg=JSON.stringify(res.error).toLowerCase();
+    dbg('MCP tools/call '+name+' error: '+JSON.stringify(res.error).slice(0,200),'warn');
+    if(!retried&&/session|initializ|not found|expired|invalid/.test(msg)){
+      try{await mcpInit();}catch(_){}
+      return mcpCall(name,args,true);}
+    return null;}
+  return res.result||null;}
+function resErrorText(res){
+  if(res&&res.isError){
+    return ((res.content||[]).map(function(c){return c.text||'';}).join(' ').trim())||'tool error';}
+  return '';}
+function jsonUnescape(s){return String(s||'').replace(/\\\\/g,'\u0001').replace(/\\"/g,'"').replace(/\\n/g,' ').replace(/\u0001/g,'\\');}
+
+/* ============ FIXED: extractAudioFromAnything — resource, structuredContent ============ */
+function extractAudioFromAnything(obj){
+  if(!obj)return null;
+  var items=(obj.content)||[];
+  for(var i=0;i<items.length;i++){
+    var it=items[i];
+    if(!it)continue;
+    if(it.type==='audio'&&it.data)return{bytes:base64ToBytes(it.data)};
+    if(it.type==='resource'&&it.resource){
+      var r=it.resource;
+      if(r.blob)return{bytes:base64ToBytes(r.blob)};
+      if(r.uri){
+        var uri=String(r.uri);
+        if(/^data:audio\//i.test(uri)){
+          var db=uri.split(',')[1];
+          if(db)return{bytes:base64ToBytes(db)};}
+        if(/^https?:/i.test(uri))return{url:uri};
+        if(/^file:/i.test(uri))return{path:uri.replace(/^file:\/\/\/?/,'')};}}}
+  if(obj.structuredContent){
+    var s=extractAudioFromAnything(obj.structuredContent);
+    if(s)return s;}
+  var blob=jsonUnescape(JSON.stringify(obj||{}));
+  var du=blob.match(/data:audio\/[A-Za-z0-9.+-]+;base64,([A-Za-z0-9+\/=]{500,})/);
+  if(du)return{bytes:base64ToBytes(du[1])};
+  var m=blob.match(/"(?:audio_?b?64|base64|audio_data|b64|wav_base64|audio_base64|audio)"\s*:\s*"([A-Za-z0-9+\/=]{500,})"/);
+  if(m)return{bytes:base64ToBytes(m[1])};
+  var pm=blob.match(/[A-Za-z]:\\[^\s"'<>]*?\.(?:wav|mp3|ogg|oga|webm|flac|m4a|pcm)/i);
+  if(pm)return{path:pm[0]};
+  var um=blob.match(/https?:\/\/[^\s"'<>]+?\.(?:wav|mp3|ogg|oga|webm|flac|m4a|pcm)/i);
+  if(um)return{url:um[0]};
+  var ru=blob.match(/"(?:uri|url|path|file|filepath|file_path|output|output_path|audio_url|audio_path|download_url|result_url|location|wav|mp3)"\s*:\s*"([^"]{4,500})"/i);
+  if(ru){
+    var v=ru[1];
+    if(/^https?:/i.test(v))return{url:v};
+    if(/^file:/i.test(v))return{path:v.replace(/^file:\/\/\/?/,'')};
+    if(/^[A-Za-z]:\\/.test(v)||/\.(wav|mp3|ogg|oga|webm|flac|m4a|pcm)$/i.test(v))return{path:v};}
+  return null;}
+
+/* ============ FIXED: parseJobTicket — nested text/structuredContent ============ */
+function parseJobTicket(res){
+  if(!res)return null;
+  var parts=[JSON.stringify(res)];
+  if(res.structuredContent)parts.push(JSON.stringify(res.structuredContent));
+  if(res.content)for(var i=0;i<res.content.length;i++){
+    if(res.content[i]&&res.content[i].text)parts.push(String(res.content[i].text));}
+  for(var p=0;p<parts.length;p++){
+    var blob=jsonUnescape(parts[p]);
+    var gid=(blob.match(/"generation_id"\s*:\s*"([^"]+)"/)||[])[1]||null;
+    var poll=(blob.match(/"poll_url"\s*:\s*"([^"]+)"/)||[])[1]||null;
+    var status=(blob.match(/"status"\s*:\s*"([^"]+)"/)||[])[1]||'';
+    if(gid||poll)return{generationId:gid,pollUrl:poll,status:status};
+    var j=extractJSON(blob);
+    if(j&&(j.generation_id||j.poll_url))
+      return{generationId:j.generation_id||null,pollUrl:j.poll_url||null,status:j.status||''};}
+  return null;}
+
+/* ============ FIXED: parsePollBody — JSON, SSE, embedded JSON ============ */
+function parsePollBody(txt){
+  if(!txt)return null;
+  try{return JSON.parse(txt);}catch(_){}
+  var lines=txt.split(/\r?\n/),last=null;
+  for(var i=0;i<lines.length;i++){
+    var ln=lines[i].trim();
+    if(ln.indexOf('data:')!==0)continue;
+    var d=ln.slice(5).trim();
+    if(!d||d==='[DONE]')continue;
+    last=d;}
+  if(last){try{return JSON.parse(last);}catch(_){}}
+  var jm=txt.match(/\{[\s\S]*\}/);
+  if(jm){try{return JSON.parse(jm[0]);}catch(_){}}
+  return null;}
+
+async function pollGeneration(ticket,maxMs){
+  var urls=[];
+  if(ticket.pollUrl){
+    var pu=ticket.pollUrl;
+    if(/^https?:/i.test(pu))urls.push(pu);
+    else urls.push(vbBase()+(pu.charAt(0)==='/'?pu:'/'+pu));}
+  if(ticket.generationId){
+    ['/generations/'+ticket.generationId,'/generation/'+ticket.generationId,'/api/generations/'+ticket.generationId].forEach(function(u){
+      if(urls.indexOf(vbBase()+u)===-1)urls.push(vbBase()+u);});}
+  if(!urls.length)throw new Error('job ticket has no poll_url or generation_id');
+  var start=Date.now(),lastTxt='';
+  while(Date.now()-start<maxMs){
+    await sleep(500);
+    for(var i=0;i<urls.length;i++){
+      try{
+        var r=await fetch(urls[i],{cache:'no-store'});
+        if(!r.ok)continue;
+        var txt=await r.text();
+        var j=parsePollBody(txt);
+        if(!j)continue;
+        lastTxt=txt;
+        var audio=extractAudioFromAnything(j);
+        if(audio)return audio;
+        var st=String(j.status||'').toLowerCase();
+        if(/fail|error|cancel/.test(st))throw new Error('generation '+st+': '+txt.slice(0,200));
+        if(/complete|done|success|ready|finish/.test(st)){
+          dbg('Job completed. Final JSON: '+txt.slice(0,400),'warn');
+          throw new Error('generation completed but audio not found in reply (logged above)');}
+      }catch(e){
+        if(/generation (failed|completed)/.test(safeMsg(e)))throw e;}}
+  }
+  throw new Error('poll timeout ('+Math.round(maxMs/1000)+'s). Last: '+lastTxt.slice(0,200));}
+
+function parseVoicesFromMCP(res){
+  var arr=null;
+  var blob=JSON.stringify(res||{});
+  var j=extractJSON(blob);
+  if(j){
+    if(Array.isArray(j))arr=j;
+    else arr=j.profiles||j.voices||j.personas||j.items||j.data||null;}
+  if(!arr&&res&&res.content){
+    for(var i=0;i<res.content.length;i++){
+      var it=res.content[i];
+      if(it.type==='text'&&it.text){
+        var j2=extractJSON(it.text);
+        if(j2){arr=Array.isArray(j2)?j2:(j2.profiles||j2.voices||j2.personas||j2.items||j2.data||null);}
+        if(arr)break;}}}
+  if(!arr)return[];
+  function guess(n){
+    var s=String(n||'').toLowerCase();
+    var m=s.match(/^[ab][fm]_/);
+    if(m)return m[0].charAt(1)==='f'?'female':'male';
+    if(/female|woman|girl|af_|bf_|amy|bella|heart|sarah|emma|lily|alice|nicole|nova|sky/.test(s))return'female';
+    if(/male|man\b|am_|bm_|michael|george|adam|daniel|lewis|fenrir|puck|eric|liam/.test(s))return'male';
+    return'';}
+  var out=[];
+  for(var k=0;k<arr.length;k++){
+    var v=arr[k];
+    if(typeof v==='string'){out.push({name:v,id:v,gender:guess(v)});}
+    else if(v&&(v.name||v.id||v.idstring)){
+      var nm=String(v.name||v.id||v.idstring);
+      var idv=String(v.id||v.idstring||nm);
+      var g=String(v.gender||v.sex||'').toLowerCase();
+      out.push({name:nm,id:idv,gender:(g==='male'||g==='m')?'male':(g==='female'||g==='f')?'female':guess(nm)});}}
+  return out;}
+function profileCandidates(p){
+  if(!p)return[];
+  var out=[];
+  [p.name,p.id].forEach(function(x){
+    if(x&&typeof x==='string'&&x.trim()&&out.indexOf(x.trim())===-1)out.push(x.trim());});
+  return out.slice(0,3);}
+function profileForGender(g){
+  var pool=state.vb.profiles.filter(function(p){return p.gender===g;});
+  if(pool.length)return pool[0];
+  var stored=g==='male'?state.vbVoiceMale:state.vbVoiceFemale;
+  if(stored){
+    var hit=state.vb.profiles.filter(function(p){return p.id===stored||p.name===stored;})[0];
+    if(hit)return hit;}
+  return state.vb.profiles[0]||null;}
+async function mcpSpeakVariants(clean,gender){
+  var prof=profileForGender(gender);
+  var ids=profileCandidates(prof);
+  var cached=null;
+  try{cached=localStorage.getItem('osce_vb_prof_'+gender);}catch(_){}
+  if(cached&&ids.indexOf(cached)===-1)ids.unshift(cached);
+  if(!ids.length)ids=[null];
+  var lastErr='';
+  for(var v=0;v<ids.length;v++){
+    var args={text:clean};
+    if(ids[v])args.profile=ids[v];
+    var res=await mcpCall(VB_SPEAK,args);
+    if(!res){lastErr='call failed';continue;}
+    var err=resErrorText(res);
+    if(err){lastErr=err;dbg('SPEAK ✗ profile="'+(ids[v]||'(default)')+'" → '+err.slice(0,160),'warn');continue;}
+    var audio=extractAudioFromAnything(res);
+    if(audio){
+      dbg('SPEAK ✓ profile="'+(ids[v]||'(default)')+'" → direct audio','ok');
+      if(ids[v]){try{localStorage.setItem('osce_vb_prof_'+gender,ids[v]);}catch(_){}}
+      return audio;}
+    var ticket=parseJobTicket(res);
+    if(ticket){
+      dbg('SPEAK → job '+String(ticket.generationId||'').slice(0,8)+'… ('+(ticket.status||'generating')+') — polling…','info');
+      try{
+        var audio2=await pollGeneration(ticket,30000);
+        dbg('SPEAK ✓ job finished → audio','ok');
+        if(ids[v]){try{localStorage.setItem('osce_vb_prof_'+gender,ids[v]);}catch(_){}}
+        return audio2;
+      }catch(e){
+        lastErr=safeMsg(e);
+        dbg('POLL ✗ '+lastErr,'warn');}}
+    else{
+      lastErr='no audio and no job ticket in: '+JSON.stringify(res).slice(0,180);
+      dbg('SPEAK ✗ profile="'+(ids[v]||'(default)')+'" → '+lastErr,'warn');}}
+  throw new Error('all profile variants failed. Last: '+lastErr);}
+
+async function playAudioResult(audio){
+  if(audio.bytes)return await playWav(audio.bytes);
+  if(audio.url)return await playUrl(audio.url);
+  if(audio.path){
+    var p=String(audio.path).replace(/\\/g,'/');
+    var tries=[];
+    if(/^https?:/i.test(p))tries.push(p);
+    else if(/^file:/i.test(p))tries.push(p);
+    else{
+      if(/^[A-Za-z]:\//.test(p))tries.push('file:///'+p);
+      tries.push('file:///'+p.replace(/^\/+/,''));
+      tries.push(vbBase()+'/'+p.replace(/^[A-Za-z]:\//,'').replace(/^\/+/,''));
+      tries.push(vbBase()+'/files/'+encodeURIComponent(p.split('/').pop()));}
+    for(var i=0;i<tries.length;i++){
+      var ok=await playUrl(tries[i]);
+      if(ok){dbg('played via '+tries[i].slice(0,90),'ok');return true;}
+      dbg('playback failed: '+tries[i].slice(0,90),'warn');}
+    return false;}
+  return false;}
+
+/* ============ FIXED: mcpConnect — tolerant discovery, best-effort test ============ */
+async function mcpConnect(manual){
+  dbg('🔌 MCP: connecting…','info');
+  await mcpInit();
+  dbg('MCP: initialized ✓','ok');
+  var tools=null;
+  try{tools=await mcpToolsList();}catch(e){dbg('tools/list failed: '+safeMsg(e),'warn');}
+  state.vb.tools=tools||[];
+  if(tools&&tools.length){
+    dbg('MCP: '+tools.length+' tools → '+tools.map(function(t){return t.name;}).join(', '),'ok');
+    var profTool=null;
+    for(var j=0;j<tools.length;j++)if(tools[j].name===VB_PROFILES)profTool=tools[j];
+    if(profTool){
+      try{
+        var pr=await mcpCall(VB_PROFILES,{});
+        var list=parseVoicesFromMCP(pr);
+        if(list.length){
+          state.vb.profiles=list;
+          dbg('MCP: '+list.length+' profiles → '+list.map(function(p){return p.name;}).join(', '),'ok');}
+        else dbg('MCP: list_profiles not parseable — using Kokoro defaults','warn');
+      }catch(e){dbg('list_profiles failed: '+safeMsg(e),'warn');}
+    }
+  }
+  if(!state.vb.profiles.length)state.vb.profiles=defaultCatalog();
+  renderVbVoiceSelects(state.vb.profiles);
+  autoAssignVbVoices();
+
+  state.vb.mcpOk=true;
+  vbSetMode('ready','',manual);
+  try{
+    var g=state.effectiveGender||'female';
+    dbg('Live test: voicebox.speak ('+g+') → poll…','info');
+    var audio=await mcpSpeakVariants('Hello, this is a voice test.',g);
+    var played=await playAudioResult(audio);
+    if(played){
+      prefetchTTS('Hello doctor.');
+      dbg('🎉 voicebox.speak WORKS end-to-end — voice is live','ok');
+      toast('Voicebox connected 🎉');
+    }else{
+      dbg('Voicebox connected — test audio received but playback failed','warn');
+      toast('Voicebox connected — test audio could not be played');
+    }
+  }catch(e){
+    dbg('Voicebox connected but test speak failed: '+safeMsg(e),'warn');
+    toast('Voicebox connected — first reply may be slow');
+  }
+  return true;}
+
+var vbConnectPromise=null;
+async function vbConnect(manual){
+  if(state.vb.connecting)return state.vb.connectPromise;
+  state.vb.connecting=true;
+  state.vb.connectPromise=(async function(){
+    vbSetMode('pending','',manual);
+    var base=(($('vb-url')&&$('vb-url').value)||'').trim().replace(/\/+$/,'')||state.vb.base||'http://127.0.0.1:17493';
+    var alive=await probeAlive(base,1300);
+    if(!alive){
+      state.vb.base='';
+      vbSetMode('down','',manual);
+      if(manual)toast('Voicebox not reachable — is the app running?');
+      return false;}
+    state.vb.base=base;
+    try{localStorage.setItem('osce_vb_url',base);}catch(_){}
+    try{
+      await mcpConnect(manual);
+      return true;
+    }catch(e){
+      dbg('MCP: '+safeMsg(e),'err');
+      if(e&&e.cors){
+        vbSetMode('noapi','⚠ CORS — open from http://localhost',manual);
+        if(manual)toast('CORS block — see log for the exact origin');
+      }else{
+        vbSetMode('noapi','',manual);
+        if(manual)toast('MCP error — the exact server reply is in the log');
+      }
+      return false;}
+  })().finally(function(){state.vb.connecting=false;});
+  return state.vb.connectPromise;}
+
+/* ============ FIXED: vbDiagnose — verbose CORS reporting ============ */
+async function vbDiagnose(){
+  dbg('── Diagnosis ──','info');
+  try{dbg('Page origin: '+location.origin+'  ('+location.protocol+')','info');}catch(_){}
+  var base=(($('vb-url')&&$('vb-url').value)||state.vb.base||'http://127.0.0.1:17493').replace(/\/+$/,'');
+  var alive=await probeAlive(base,1200);
+  dbg(alive?('✓ '+base+' reachable (opaque probe)'):'✗ not reachable — is Voicebox running?',alive?'ok':'err');
+  if(!alive)return;
+  state.vb.base=base;
+  try{
+    await mcpInit();
+    dbg('✓ initialize OK','ok');
+  }catch(e){
+    if(e&&e.cors){
+      dbg('✗ initialize blocked by CORS — see three lines above for what to whitelist','err');
+      toast('Voicebox CORS block — check log for origin');
+    }else{
+      dbg('✗ initialize failed: '+safeMsg(e),'err');
+    }
+    dbg('────────────────','info');
+    return;
+  }
+  try{
+    await mcpConnect(true);
+    dbg('✓ Full pipeline OK — voice plays','ok');
+  }catch(e){
+    dbg('✗ '+safeMsg(e),'err');
+  }
+  dbg('────────────────','info');}
+
+function base64ToBytes(b64){
+  var bin=atob(b64);
+  var u=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  return u.buffer;}
+
+/* ============ VOICE SELECT ============ */
+var KOKORO_F=['af_heart','af_bella','bf_emma','bf_isabella'];
+var KOKORO_M=['am_michael','bm_george','am_fenrir','bm_lewis'];
+function defaultCatalog(){
+  var out=[];
+  KOKORO_F.forEach(function(n){out.push({name:n,id:n,gender:'female'});});
+  KOKORO_M.forEach(function(n){out.push({name:n,id:n,gender:'male'});});
+  return out;}
+function renderVbVoiceSelects(list){
+  var selF=$('vb-female-voice'),selM=$('vb-male-voice');
+  if(!selF||!selM)return;
+  var opts='';
+  for(var i=0;i<list.length;i++){
+    var v=list[i];
+    var g=v.gender==='female'?'♀':v.gender==='male'?'♂':'·';
+    opts+='<option value="'+esc(v.id)+'">'+g+' '+esc(v.name)+'</option>';}
+  selF.innerHTML=opts;selM.innerHTML=opts;}
+function autoAssignVbVoices(){
+  var selF=$('vb-female-voice'),selM=$('vb-male-voice');
+  if(!selF||!selM)return;
+  var names=Array.prototype.slice.call(selF.options).map(function(o){return o.value;});
+  var sf=state.vbVoiceFemale,sm=state.vbVoiceMale;
+  var wantF=state.vb.profiles.filter(function(p){return p.gender==='female';})[0];
+  var wantM=state.vb.profiles.filter(function(p){return p.gender==='male';})[0];
+  if(!sf||names.indexOf(sf)===-1)sf=wantF?wantF.id:(names[0]||'');
+  if(!sm||names.indexOf(sm)===-1)sm=wantM?wantM.id:(names[names.length-1]||names[0]||'');
+  state.vbVoiceFemale=sf;state.vbVoiceMale=sm;
+  selF.value=sf;selM.value=sm;
+  try{localStorage.setItem('osce_vb_female',sf);localStorage.setItem('osce_vb_male',sm);}catch(_){}}
+function sessionVbGender(){
+  return state.sessionVoiceGender||state.effectiveGender||'female';}
+function vbReady(){return state.vb.mode==='ready'&&state.vb.mcpOk;}
+
+/* ============ AUDIO PLAYBACK ============ */
+function ensureAudioCtx(){
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!state.playCtx&&AC)state.playCtx=new AC();
+    if(state.playCtx&&state.playCtx.state==='suspended')state.playCtx.resume().catch(function(){});
+  }catch(e){}}
+function stopAudio(){
+  if(state.curSrc){try{state.curSrc.stop();}catch(e){}state.curSrc=null;}
+  if(state.curEl){try{state.curEl.pause();}catch(e){}state.curEl=null;}}
+function cancelSpeech(){state.speakSeq++;stopAudio();}
+function playWav(buf){
+  return new Promise(function(resolve){
+    try{
+      ensureAudioCtx();
+      var ctx=state.playCtx;
+      if(!ctx){resolve(false);return;}
+      ctx.decodeAudioData(buf.slice(0),function(decoded){
+        try{
+          var src=ctx.createBufferSource();
+          src.buffer=decoded;
+          var g=ctx.createGain(),now=ctx.currentTime,dur=decoded.duration;
+          g.gain.setValueAtTime(1,now);
+          if(dur>0.15)g.gain.linearRampToValueAtTime(0.0001,now+dur-0.02);
+          src.connect(g);g.connect(ctx.destination);
+          state.curSrc=src;
+          src.onended=function(){if(state.curSrc===src)state.curSrc=null;resolve(true);};
+          src.start(0);
+        }catch(e){resolve(false);}
+      },function(){resolve(false);});
+    }catch(e){resolve(false);}});}
+function playUrl(url){
+  return new Promise(function(resolve){
+    try{
+      var a=new Audio();
+      a.preload='auto';a.src=url;
+      var done=false;
+      var fin=function(v){
+        if(done)return;
+        done=true;
+        if(state.curEl===a)state.curEl=null;
+        clearTimeout(g);
+        resolve(v);};
+      state.curEl=a;
+      a.onended=function(){fin(true);};
+      a.onerror=function(){fin(false);};
+      var g=setTimeout(function(){fin(false);},20000);
+      a.addEventListener('play',function(){clearTimeout(g);});
+      a.play().catch(function(){fin(false);});
+    }catch(e){resolve(false);}});}
+function prefetchTTS(text){
+  try{
+    if(state.ttsMode==='off'||!vbReady())return null;
+    var clean=sanitizeForTTS(text);
+    if(!clean)return null;
+    var g=sessionVbGender();
+    return mcpSpeakVariants(clean,g).then(function(audio){
+      if(audio.bytes)return{type:'buf',data:audio.bytes};
+      if(audio.url)return{type:'url',url:audio.url};
+      return null;}).catch(function(){return null;});
+  }catch(e){return null;}}
+async function speakText(text,seq,pre){
+  var clean=sanitizeForTTS(text);
+  if(!clean)return false;
+  if(seq===undefined)seq=state.speakSeq;
+  if(seq!==state.speakSeq)return false;
+  state.aiSpeaking=true;
+  setAvatarVisual('speaking',true);
+  try{
+    if(state.ttsMode==='off'){
+      await sleep(Math.min(2000,300+clean.length*15));
+      return true;}
+    var gender=sessionVbGender();
+    if(vbReady()){
+      var speech=null;
+      if(pre){try{speech=await pre;}catch(_){speech=null;}}
+      if(seq!==state.speakSeq)return false;
+      if(!speech){
+        try{
+          var audio=await mcpSpeakVariants(clean,gender);
+          if(audio.bytes)speech={type:'buf',data:audio.bytes};
+          else if(audio.url)speech={type:'url',url:audio.url};
+          else if(audio.path){
+            var okP=await playAudioResult(audio);
+            if(okP)return true;}
+        }catch(e){speech=null;}}
+      if(speech){
+        var ok=speech.type==='buf'?await playWav(speech.data):await playUrl(speech.url);
+        if(ok)return true;}
+      if(!state._vbBackT){
+        state._vbBackT=true;
+        toast('Voicebox hiccup — browser backup this line (see log)');
+        dbg('speak failed → browser backup','warn');}}
+    if(seq!==state.speakSeq)return false;
+    return await browserSpeak(clean,gender);
+  }finally{
+    state.aiSpeaking=false;
+    setAvatarVisual('speaking',false);}}
+function browserSpeak(text,gender){
+  return new Promise(function(resolve){
+    try{
+      if(!('speechSynthesis'in window)){resolve(false);return;}
+      var clean=sanitizeForTTS(text);
+      if(!clean){resolve(false);return;}
+      try{speechSynthesis.cancel();}catch(e){}
+      var isF=gender!=='male';
+      var u=new SpeechSynthesisUtterance(clean);
+      u.lang=state.micLang||'en-US';
+      var voices=[];
+      try{voices=speechSynthesis.getVoices()||[];}catch(e){}
+      var en=voices.filter(function(v){return(v.lang||'').toLowerCase().indexOf('en')===0;});
+      var pool=en.length?en:voices;
+      function nameOf(v){return((v.name||'')+' '+(v.voiceURI||'')).toLowerCase();}
+      function looksF(n){return /female|woman|zira|aria|samantha|jenny|emma|hazel|karen|susan|tessa|fiona|moira|serena|kate|libby|sonia|natasha/.test(n)&&!/\bmale\b/.test(n);}
+      function looksM(n){return !/female/.test(n)&&/\bmale\b|\bman\b|david|mark|george|guy|james|ryan|daniel|thomas|fred|ralph|alex\b|oliver|liam|brian|aaron|arthur/.test(n);}
+      var match=null;
+      for(var i=0;i<pool.length;i++){
+        var n=nameOf(pool[i]);
+        if(isF?looksF(n):looksM(n)){match=pool[i];break;}}
+      if(match)u.voice=match;
+      u.pitch=isF?1.2:0.72;
+      u.rate=1.02;
+      var done=false;
+      var fin=function(){if(done)return;done=true;resolve(true);};
+      var g=setTimeout(fin,Math.max(7000,clean.length*110));
+      u.onend=function(){clearTimeout(g);fin();};
+      u.onerror=function(){clearTimeout(g);fin();};
+      try{speechSynthesis.speak(u);}catch(e){clearTimeout(g);resolve(false);}
+    }catch(e){resolve(false);}});}
+function setVoiceNote(override){
+  var el=$('voice-note');
+  if(!el)return;
+  if(override){el.textContent=override;return;}
+  var g=sessionVbGender();
+  var v=g==='male'?state.vbVoiceMale:state.vbVoiceFemale;
+  var st=vbReady()?'Voicebox ✓ (MCP speak+poll)':state.vb.mode==='pending'?'connecting…':state.vb.mode==='noapi'?'⚠ MCP error — see log':'not connected — browser backup';
+  var lock=state.running&&state.sessionVoiceName?' · 🔒 '+state.sessionVoiceName:'';
+  el.textContent=(g==='male'?'♂ ':'♀ ')+(v||'—')+' · '+st+lock;}
+function syncVoiceUI(){
+  var mode=$('voice-gender')?$('voice-gender').value:'auto';
+  var g=(mode==='auto')?(state.caseGender||state.effectiveGender||'female'):mode;
+  state.effectiveGender=g;
+  setVoiceNote();
+  updateEmoPreview();}
+function lockSessionVoice(){
+  var mode=$('voice-gender')?$('voice-gender').value:'auto';
+  var g=(mode==='auto')?(state.caseGender||'female'):mode;
+  state.effectiveGender=g;
+  state.sessionVoiceGender=g;
+  state.sessionVoiceName=g==='male'?state.vbVoiceMale:state.vbVoiceFemale;
+  dbg('Voice locked → '+state.sessionVoiceName+' ('+g+')','ok');
+  setVoiceNote();}
+
+/* ============ TRANSCRIPT UI ============ */
+function scrollBottom(){var el=$('transcript');if(el)el.scrollTop=el.scrollHeight;}
+function addBubble(kind,text){
+  var el=document.createElement('div');
+  el.className='bubble '+kind;
+  if(kind==='patient'||kind==='student')el.innerHTML='<div class="who">'+(kind==='patient'?'Patient':'You')+'</div><div class="txt">'+esc(text)+'</div>';
+  else el.textContent=text;
+  $('transcript').appendChild(el);
+  scrollBottom();
+  return el;}
+function showInterim(t){
+  if(!state.interimEl){
+    state.interimEl=document.createElement('div');
+    state.interimEl.className='bubble interim';
+    $('transcript').appendChild(state.interimEl);}
+  state.interimEl.textContent=t;
+  scrollBottom();}
+function removeInterim(){if(state.interimEl){try{state.interimEl.remove();}catch(e){}state.interimEl=null;}}
+function transcriptText(){return state.turns.map(function(t){return(t.who==='student'?'STUDENT: ':'PATIENT: ')+t.text;}).join('\n');}
+function setMeterStatus(mode){
+  var el=$('meter-status');
+  if(!el)return;
+  el.className=mode||'';
+  el.textContent=({listening:'Listening',speaking:'Patient speaking',thinking:'Thinking…'})[mode]||'Ready';}
+
+/* ============ BROWSER SR + WATCHDOG ============ */
+function micShouldListen(){
+  return state.running&&!state.paused&&!state.responding&&!state.aiSpeaking&&!state.micUserMuted&&!document.hidden;}
+function buildRecognition(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var rec=new SR();
+  rec.continuous=true;
+  rec.interimResults=true;
+  rec.maxAlternatives=1;
+  var finalBuf='';
+  rec.onstart=function(){
+    state.recognitionActive=true;
+    var mb=$('mic-btn');
+    if(mb){mb.classList.add('active');mb.classList.remove('off');}
+    setAvatarVisual('listening',true);};
+  rec.onresult=function(ev){
+    if(Date.now()<state.ignoreUntil)return;
+    var interim='',fin='';
+    for(var i=ev.resultIndex;i<ev.results.length;i++){
+      var r=ev.results[i];
+      if(r.isFinal)fin+=r[0].transcript;
+      else interim+=r[0].transcript;}
+    if(interim)showInterim(interim);
+    if(fin){
+      finalBuf+=fin+' ';
+      removeInterim();
+      clearTimeout(state.sendDebounce);
+      state.sendDebounce=setTimeout(function(){
+        var t=finalBuf.trim();
+        finalBuf='';
+        if(t.length>1)sendToPatient(t);
+      },300);}};
+  rec.onerror=function(ev){
+    state.recognitionActive=false;
+    var err=ev&&ev.error?ev.error:'';
+    if(err==='not-allowed'||err==='service-not-allowed'||err==='audio-capture'){
+      state.micUserMuted=true;
+      if(!state._srWarned){
+        state._srWarned=true;
+        toast('Microphone blocked — type below, or allow the mic and tap 🎤');}}};
+  rec.onend=function(){
+    state.recognitionActive=false;
+    setAvatarVisual('listening',false);
+    var mb=$('mic-btn');
+    if(mb)mb.classList.remove('active');
+    if(micShouldListen()){
+      clearTimeout(state._recRestart);
+      state._recRestart=setTimeout(startRecognition,350);}};
+  state.recognition=rec;}
+function startRecognition(){
+  if(!micShouldListen()||state.recognitionActive)return;
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    if(!state._srWarned){
+      state._srWarned=true;
+      toast('Speech recognition not supported — type below');}
+    return;}
+  try{
+    if(!state.recognition)buildRecognition();
+    state.recognition.lang=state.micLang||'en-US';
+    state.recognition.start();
+  }catch(e){
+    clearTimeout(state._recRestart);
+    state._recRestart=setTimeout(startRecognition,500);}}
+function stopRecognition(){
+  clearTimeout(state.sendDebounce);
+  try{if(state.recognition&&state.recognitionActive)state.recognition.stop();}catch(e){}
+  state.recognitionActive=false;
+  setAvatarVisual('listening',false);
+  removeInterim();}
+function startListening(){
+  if(!state.running||state.paused)return;
+  startRecognition();}
+function stopListening(){stopRecognition();}
+setInterval(function(){
+  if(!micShouldListen())return;
+  if(!state.recognitionActive)startRecognition();
+},2000);
+
+/* ============ METER ============ */
+function startMeter(){
+  try{
+    var barsEl=$('meter-bars');
+    barsEl.innerHTML='';
+    state.meterBars=[];
+    for(var i=0;i<22;i++){
+      var b=document.createElement('div');
+      b.className='meter-bar';
+      b.style.height='6%';
+      barsEl.appendChild(b);
+      state.meterBars.push(b);}
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC||!micStream)return;
+    state.audioCtx=state.audioCtx||new AC();
+    if(state.audioCtx.state==='suspended')state.audioCtx.resume().catch(function(){});
+    var src=state.audioCtx.createMediaStreamSource(micStream);
+    var an=state.audioCtx.createAnalyser();
+    an.fftSize=256;
+    an.smoothingTimeConstant=.75;
+    src.connect(an);
+    state.micSrcNode=src;
+    var data=new Uint8Array(an.frequencyBinCount);
+    var step=Math.max(1,Math.floor(data.length/state.meterBars.length));
+    var loop=function(){
+      if(!state.running)return;
+      try{
+        an.getByteFrequencyData(data);
+        for(var j=0;j<state.meterBars.length;j++){
+          var v=(data[j*step]||0)/255;
+          state.meterBars[j].style.height=clampN(v*140,5,100).toFixed(0)+'%';
+          state.meterBars[j].classList.toggle('hot',v>0.72);}
+      }catch(_){}
+      state.meterRaf=requestAnimationFrame(loop);};
+    state.meterRaf=requestAnimationFrame(loop);
+  }catch(e){}}
+function stopMeter(){
+  if(state.meterRaf){try{cancelAnimationFrame(state.meterRaf);}catch(_){}state.meterRaf=null;}
+  try{if(state.micSrcNode)state.micSrcNode.disconnect();}catch(_){}
+  state.micSrcNode=null;
+  state.meterBars=[];
+  var b=$('meter-bars');
+  if(b)b.innerHTML='';}
+
+/* ============ PATIENT BRAIN ============ */
+var FALLBACK_LINES=["Sorry doctor… could you say that again for me?","Hmm… I'm not sure I follow. What do you mean?","Sorry, I didn't catch all of that."];
+function patientSystemPrompt(){
+  var role=state.userRole||'pharmacist';
+  var g=state.effectiveGender==='male'?'man':'woman';
+  var lines=[
+    'You ARE the patient in a live role-play with a '+role+' student. NEVER break character, NEVER act as the clinician.',
+    'CASE (student has not seen it): '+state.caseScenario.slice(0,6000),
+    'RULES: Reply with spoken dialogue ONLY — 1-2 short sentences, under 35 words. No asterisks, emojis, lists, or stage directions.',
+    'You are a '+g+' — never contradict this. Use layperson words.',
+    'Answer ONLY what is asked; do not volunteer unasked history. "I am not sure" is fine. Never give medical advice or suggest diagnoses, never ask "what brings you in".'];
+  if(state.caseMeds&&state.caseMeds.length)lines.push('Your medications (mention only when asked): '+state.caseMeds.join('; ')+'.');
+  return lines.join('\n');}
+function buildHistory(){
+  var msgs=[],turns=state.turns.slice(-12);
+  for(var i=0;i<turns.length;i++)msgs.push({role:turns[i].who==='student'?'user':'assistant',content:turns[i].text});
+  if(!msgs.length)msgs.push({role:'user',content:'(The consultation is starting — greet the clinician naturally.)'});
+  return msgs;}
+
+async function sendToPatient(text,alreadyLogged){
+  if(!state.running||state.paused)return;
+  text=String(text||'').trim();
+  if(!text)return;
+  if(state.responding&&!state.aiSpeaking){toast('One moment — patient is thinking…');return;}
+  var myToken=(state.replyToken=(state.replyToken||0)+1);
+  state.responding=true;
+  cancelSpeech();
+  stopListening();
+  removeInterim();
+  if(!alreadyLogged)addBubble('student',text);
+  state.turns.push({who:'student',text:text});
+  setMeterStatus('thinking');
+  if($('mic-title'))$('mic-title').textContent='Patient is replying…';
+  if($('mic-sub'))$('mic-sub').textContent='Generating answer…';
+  var t0=performance.now(),seq=state.speakSeq,sysP=patientSystemPrompt(),msgs=buildHistory();
+  var sentences=[],audioProms={},streamDone=false,shownTxt='';
+  var pBubble=addBubble('patient',''),pTxt=pBubble.querySelector('.txt');
+  if(pTxt)pTxt.innerHTML='<span class="caret"></span>';
+  function pushSentence(s,idx){
+    sentences[idx]=s;
+    shownTxt=shownTxt?(shownTxt+' '+s):s;
+    if(pTxt)pTxt.textContent=shownTxt;
+    scrollBottom();
+    if(!audioProms[idx])audioProms[idx]=prefetchTTS(s);}
+  var firstSpokeMs=0;
+  var playLoop=(async function(){
+    var i=0;
+    while(state.replyToken===myToken){
+      if(i<sentences.length&&sentences[i]){
+        if(!state.manualEmotion)setEmotion(detectEmotionFromText(sentences[i]));
+        var pre=audioProms[i];
+        audioProms[i]=null;
+        var okS=await speakText(sentences[i],seq,pre||undefined);
+        i++;
+        if(okS&&!firstSpokeMs){
+          firstSpokeMs=Math.round(performance.now()-t0);
+          if($('mic-sub'))$('mic-sub').textContent='⚡ replied in '+(firstSpokeMs/1000).toFixed(1)+'s';}
+        continue;}
+      if(streamDone)break;
+      await sleep(40);}})();
+  var fullText='',ok=false;
+  var bankHit=answerFromBank(text);
+  if(bankHit){
+    dbg('⚡ Bank hit — instant (no LLM)','ok');
+    fullText=bankHit;
+    ok=true;
+    streamDone=true;
+    pushSentence(bankHit,0);
+    await sleep(150+Math.floor(Math.random()*200));
+  }else{
+    try{
+      if(!state.resolvedModel)throw new Error('No model — verify key');
+      fullText=await geminiChatStream(msgs,sysP,140,pushSentence);
+      ok=true;
+    }catch(eS){
+      var mS=safeMsg(eS);
+      if(!isAbortError(mS)){
+        dbg('Stream failed → plain chat: '+mS,'warn');
+        try{
+          var out2=await geminiChat(msgs,sysP,140);
+          fullText=out2;
+          var parts=splitSentences(out2);
+          for(var pi=0;pi<parts.length;pi++)pushSentence(parts[pi],pi);
+          ok=true;
+        }catch(e2){
+          var m2=safeMsg(e2);
+          dbg('Patient reply failed: '+m2,'err');
+          if(!state._errShown||Date.now()-state._errShown>15000){
+            addBubble('error','⚠️ Patient AI hiccup: '+m2.slice(0,90));
+            state._errShown=Date.now();}}}}}
+  streamDone=true;
+  if(!ok){
+    fullText=state.fallbackResponse||pick(FALLBACK_LINES);
+    if(pTxt)pTxt.textContent=fullText;
+    scrollBottom();
+    pushSentence(fullText,0);}
+  if(ok&&fullText)addToRuntimeBank(text,fullText);
+  await playLoop;
+  if(fullText)state.turns.push({who:'patient',text:fullText});
+  if(state.replyToken===myToken){
+    state.responding=false;
+    if($('mic-title'))$('mic-title').textContent='Listening';
+    if($('mic-sub'))$('mic-sub').textContent='Speak — your words appear live';
+    if(state.running&&!state.paused){
+      setMeterStatus('listening');
+      state.ignoreUntil=Date.now()+300;
+      setTimeout(function(){
+        if(state.running&&!state.paused&&!state.responding)startListening();
+      },250);}}}
+
+/* ============ CASE PARSING ============ */
+function parseCase(raw){
+  var t=String(raw||'').replace(/\r/g,'');
+  state.parseToken++;
+  var title='';
+  var mT=t.match(/^\s*(?:station|title|case)\s*[:\-]\s*(.+)$/im);
+  if(mT)title=mT[1].trim();
+  else{
+    var ls=t.split('\n');
+    for(var i=0;i<ls.length;i++){
+      if(ls[i].trim()){
+        if(ls[i].trim().length<=90)title=ls[i].trim();
+        break;}}}
+  state.caseTitle=title||'Custom Case';
+  state.caseGender=detectCaseGender(t);
+  var meds=[],lines=t.split('\n'),inMeds=false;
+  for(var li=0;li<lines.length;li++){
+    var L=lines[li].trim();
+    if(!L)continue;
+    if(/^(current\s+)?medications?\b\s*[:\-]?/i.test(L)||/^meds\b\s*[:\-]?/i.test(L)){inMeds=true;continue;}
+    if(inMeds){
+      var ci=L.indexOf(':');
+      if(ci>-1&&ci<20)inMeds=false;
+      else if(/^[-*•]/.test(L)||/\b\d+\s?(mg|mcg|ml|iu|g)\b/i.test(L)||/^[A-Z][a-z]/.test(L)){
+        if(L.length<110)meds.push(L.replace(/^[-*•\d.)\s]+/,'').trim());}
+      else inMeds=false;}}
+  var doseRe=/\b([A-Z][a-z]{3,}(?:olol|pril|sartan|statin|formin|zepam|ipine|xacin|profen|azole|prazole|cillin|mycin)?)\s+(\d+(?:\.\d+)?)\s?(mg|mcg|ml|iu)\b/g,dm;
+  while((dm=doseRe.exec(t))){if(meds.indexOf(dm[0])<0)meds.push(dm[0]);}
+  meds=meds.filter(function(m,ix){
+    var f=m.split(/\s+/)[0].toLowerCase();
+    for(var k=0;k<ix;k++)if(meds[k].split(/\s+/)[0].toLowerCase()===f)return false;
+    return true;}).slice(0,12);
+  state.caseMeds=meds;
+  var rubric=[],rubRe=/([^\n]{8,150}?)\s*[\(\[]\s*(\d{1,2})\s*(?:marks?|pts?|points?)\s*[\)\]]/gi,rm;
+  while((rm=rubRe.exec(t))&&rubric.length<12){
+    rubric.push({desc:rm[1].replace(/^[\s\-*•\d.]+/,'').trim(),max:clampN(parseInt(rm[2],10)||2,1,10)});}
+  state.rubric=rubric;
+  state.rubricMax=rubric.reduce(function(a,b){return a+b.max;},0);
+  var opening='';
+  var om=t.match(/(?:opening(?:\s+line)?|first\s+line|patient\s+starts?)\s*[:\-]\s*["“]?([^"”\n]+)["”]?/i);
+  if(!om)om=t.match(/["“]([^"”]{15,220})["”]/);
+  if(om)opening=om[1].trim();
+  state.openingLine=validatePatientOpening(opening)||'';
+  state.caseScenario=t.slice(0,12000);
+  state.fallbackResponse=state.openingLine||'';}
+function updateCaseUI(){
+  var card=$('understand-card');
+  if(!card)return;
+  var g=state.caseGender;
+  var gTxt=g?(g==='female'?'♀ Female':'♂ Male'):'⚠ not detected — default ♀';
+  var p;
+  if(state.prep.status==='ready')p='<b style="color:#6ee7b7">🧠 '+state.prep.qaBank.length+' instant answers ready (cached)</b>';
+  else if(state.prep.status==='working')p='<b style="color:#fcd34d">🧠 studying…</b>';
+  else if(state.prep.status==='failed')p='<b style="color:#fca5a5">🧠 prep failed — retry</b>';
+  else p='<b style="color:#fcd34d">🧠 not prepared</b>';
+  card.innerHTML='<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:6px">✅ '+esc(state.caseTitle)+'</div>'+
+    '<div style="font-size:12px;color:var(--muted);line-height:1.7">Gender: <b style="color:'+(g==='male'?'#93c5fd':'#f9a8d4')+'">'+gTxt+'</b> · Meds: <b style="color:var(--cyan)">'+state.caseMeds.length+'</b> · Rubric: <b style="color:var(--cyan)">'+(state.rubric.length||'auto 6×2')+'</b><br>'+p+'</div>';
+  card.classList.remove('hidden');}
+function setCaseText(text){
+  state.rawDoc=text||'';
+  state.runtimeBank=[];
+  state.prep={status:'idle',qaBank:[],forDoc:''};
+  parseCase(state.rawDoc);
+  var pv=$('file-preview');
+  pv.classList.remove('hidden');
+  pv.textContent=state.rawDoc.slice(0,800)+(state.rawDoc.length>800?'\n…':'');
+  updateCaseUI();
+  syncVoiceUI();
+  updateStartBtn();
+  updatePrepUI();
+  dbg('Case: '+state.caseTitle+' · gender='+(state.caseGender||'?')+' · meds='+state.caseMeds.length,'ok');
+  if(loadPrepCache()){
+    dbg('🧠 Loaded cached prep ('+state.prep.qaBank.length+' answers)','ok');
+    toast('🧠 Cached prep loaded — ready instantly');
+    updatePrepUI();updateCaseUI();updateStartBtn();
+    return;}
+  if(state.keyVerified)prepareCase();}
+
+var DEMO_CASE=`Station: Community Pharmacy — New Complaint Consultation
+Patient: Mrs. Eleanor Whitfield, a 72-year-old woman who lives alone with her cat.
+Gender: female
+Opening line: "Hello, doctor… I'm glad you had a minute. I've been getting a tight feeling across my chest since Tuesday."
+
+Background:
+Mrs. Whitfield has had intermittent central chest tightness for four days. It comes on when she walks uphill and eases after about five minutes of rest. She felt slightly breathless on the stairs this morning. No nausea, no sweating. She is anxious because her husband died of a heart attack two years ago.
+
+Medical history: High blood pressure for 10 years. Type 2 diabetes. Mild arthritis in both knees.
+
+Current medications:
+- Amlodipine 5 mg once daily
+- Metformin 500 mg twice daily
+- Ibuprofen 400 mg as needed for knee pain, about 3-4 times a week
+- Ginkgo biloba herbal tablets, one daily, started last month
+
+Allergies: None known.
+Smoking: never. Alcohol: one glass of sherry at weekends.
+
+Information to reveal ONLY if specifically asked:
+- Yesterday the tightness came on while shopping and lasted about 10 minutes.
+- She felt dizzy during that episode.
+- She often forgets her morning metformin dose.
+
+Red flag: the episode with dizziness suggests she needs urgent referral — the student should pick this up.
+
+Marking criteria:
+- Introduces themselves and confirms the patient's identity (2 marks)
+- Uses open questions to explore the chest tightness (3 marks)
+- Takes a full medication history including OTC and herbal products (3 marks)
+- Identifies the ibuprofen risk with her blood pressure and the ginkgo concern (3 marks)
+- Screens for red flags and arranges urgent review appropriately (3 marks)
+- Communicates with empathy and checks understanding (2 marks)`;
+
+/* ============ FILES / SPRITES ============ */
+async function extractPDF(buf){
+  if(!window.pdfjsLib)throw new Error('PDF engine not loaded');
+  var pdf=await pdfjsLib.getDocument({data:buf}).promise,out='';
+  for(var p=1;p<=pdf.numPages;p++){
+    var pg=await pdf.getPage(p),tc=await pg.getTextContent(),line='';
+    for(var i=0;i<tc.items.length;i++)line+=tc.items[i].str+' ';
+    out+=line.trim()+'\n';}
+  return out;}
+async function handleFile(file){
+  $('upload-status').textContent='Reading '+file.name+'…';
+  try{
+    var ext=(file.name.split('.').pop()||'').toLowerCase(),text='';
+    if(ext==='pdf')text=await extractPDF(await file.arrayBuffer());
+    else if(ext==='docx'){
+      if(!window.mammoth)throw new Error('DOCX engine not loaded');
+      var r=await mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});
+      text=r.value||'';}
+    else text=await file.text();
+    if(!text||!text.trim())throw new Error('No readable text found');
+    setCaseText(text);
+    $('upload-status').textContent='✅ '+file.name+' ('+text.length.toLocaleString()+' chars)';
+    $('upload-zone').classList.add('filled');
+    toast('Case loaded — '+state.caseTitle);
+  }catch(e){
+    $('upload-status').textContent='❌ '+safeMsg(e);
+    dbg('File error: '+safeMsg(e),'err');}}
+function readSprite(input,which){
+  var f=input.files&&input.files[0];
+  input.value='';
+  if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    if(which==='male')state.avatarMale=String(rd.result);
+    else state.avatarFemale=String(rd.result);
+    refreshAvatar();
+    updateEmoPreview();
+    updateSpriteNote();
+    toast((which==='male'?'♂':'♀')+' grid loaded — check the Expression preview');};
+  rd.readAsDataURL(f);}
+function updateSpriteNote(){
+  var n=$('sprite-note');
+  if(!n)return;
+  n.textContent=(state.avatarMale?'♂ loaded':'♂ none')+' · '+(state.avatarFemale?'♀ loaded':'♀ none');}
+
+/* ============ TIMER / PAUSE ============ */
+function startTimer(){
+  state.startedAt=Date.now();
+  state.timeRemaining=state.timeLimitSec;
+  updateTimerUI();
+  state.timerId=setInterval(function(){
+    if(state.paused)return;
+    state.timeRemaining--;
+    updateTimerUI();
+    if(state.timeRemaining<=0){
+      clearInterval(state.timerId);
+      state.timerId=null;
+      endSession('Time expired');}
+  },1000);}
+function updateTimerUI(){
+  var m=Math.floor(Math.max(0,state.timeRemaining)/60),s=Math.max(0,state.timeRemaining)%60,el=$('timer');
+  el.textContent=m+':'+String(s).padStart(2,'0');
+  el.classList.toggle('warning',state.timeRemaining<=120&&state.timeRemaining>30);
+  el.classList.toggle('critical',state.timeRemaining<=30);}
+function togglePause(){
+  if(!state.running)return;
+  state.paused=!state.paused;
+  $('pause-btn').textContent=state.paused?'▶':'⏸';
+  if(state.paused){
+    stopListening();
+    addBubble('sys','⏸ Paused');
+    setMeterStatus('');
+    if($('mic-title'))$('mic-title').textContent='Paused';}
+  else{
+    addBubble('sys','▶ Resumed');
+    if($('mic-title'))$('mic-title').textContent='Listening';
+    if(!state.responding)startListening();}}
+
+/* ============ SESSION ============ */
+async function startSession(){
+  if(state.running)return;
+  if(!state.keyVerified){toast('Verify your Gemini API key first');return;}
+  if(!state.rawDoc){toast('Load a case file first — or press Load Demo');return;}
+  if(!vbReady())await vbConnect(false);
+  if(vbReady())ensureAudioCtx();
+  lockSessionVoice();
+  refreshAvatar();
+  state.turns=[];
+  state.responding=false;
+  state.replyToken=(state.replyToken||0)+1;
+  state._vbBackT=false;
+  state.micUserMuted=false;
+  state.manualEmotion=false;
+  updateAutoBtn();
+  state.running=true;
+  state.paused=false;
+  setEmotion('calm');
+  $('setup-panel').classList.add('hidden');
+  $('results-panel').classList.add('hidden');
+  $('session-panel').classList.remove('hidden');
+  document.body.classList.add('session-mode');
+  window.scrollTo(0,0);
+  $('transcript').innerHTML='';
+  $('station-name').textContent=state.caseTitle;
+  $('case-mini').textContent=state.caseTitle;
+  var vt=vbReady()?('Voicebox 🔒 '+state.sessionVoiceName):'browser backup';
+  $('gender-note').textContent=(state.effectiveGender==='female'?'♀ Female':'♂ Male')+' · '+vt;
+  $('pause-btn').textContent='⏸';
+  var mb=$('mic-btn');
+  mb.classList.remove('active');mb.classList.remove('off');
+  if($('mic-title'))$('mic-title').textContent='Listening';
+  if($('mic-sub'))$('mic-sub').textContent='Speak — your words appear live';
+  state.timeLimitSec=parseInt($('time-limit').value,10)*60||600;
+  startTimer();
+  var micOk=true;
+  try{await ensureMic();startMeter();}
+  catch(e){micOk=false;toast('Microphone unavailable — type your questions below');}
+  addBubble('sys','Session started · '+state.caseTitle+' · patient '+(state.effectiveGender==='female'?'♀':'♂')+(micOk?' · mic live':' · text mode'));
+  state.responding=true;
+  setMeterStatus('speaking');
+  var open=state.openingLine||(state.effectiveGender==='male'?"Hello doctor… thanks for seeing me. I've not been feeling right lately.":"Hello doctor… thank you for seeing me. I've not been feeling right lately.");
+  state.openingLine=open;
+  var openPre=prefetchTTS(open);
+  state.turns.push({who:'patient',text:open});
+  addBubble('patient',open);
+  await speakText(open,undefined,openPre||undefined);
+  state.responding=false;
+  setMeterStatus('listening');
+  if(state.running&&!state.paused)startListening();}
+async function endSession(reason){
+  if(!state.running)return;
+  state.running=false;
+  state.paused=false;
+  state.replyToken=(state.replyToken||0)+1;
+  cancelSpeech();
+  stopListening();
+  if(state.timerId){clearInterval(state.timerId);state.timerId=null;}
+  stopMeter();
+  var dur=state.startedAt?Math.max(1,Math.round((Date.now()-state.startedAt)/1000)):0;
+  $('session-panel').classList.add('hidden');
+  document.body.classList.remove('session-mode');
+  $('results-panel').classList.remove('hidden');
+  window.scrollTo(0,0);
+  $('report-case').textContent=state.caseTitle;
+  $('report-duration').textContent=Math.floor(dur/60)+'m '+(dur%60)+'s';
+  $('report-reason').textContent=reason||'Ended';
+  $('rubric-results').innerHTML='<div class="ri"><div class="ri-desc">⏳ AI examiner is scoring…</div></div>';
+  $('feedback').textContent='';
+  $('total-score').textContent='…';
+  $('percentage').textContent='';
+  var score=await scoreSession();
+  renderResults(score);}
+
+/* ============ SCORING ============ */
+var DEFAULT_RUBRIC=[
+  {desc:'Introduces self & confirms patient identity',max:2},
+  {desc:'Open-question history of presenting complaint',max:2},
+  {desc:'Medication history (names, doses, adherence)',max:2},
+  {desc:'Red-flag / safety screening',max:2},
+  {desc:'Clear advice & plan, checks understanding',max:2},
+  {desc:'Communication & empathy',max:2}];
+function localScore(transcript){
+  var t=(transcript||'').toLowerCase();
+  var probes=[
+    {re:/\b(my name is|i'?m the|hello|good (morning|afternoon)|mr\.|mrs\.|ms\.|consent)/,ev:'greeting/identity'},
+    {re:/\b(how (have you been|are you feeling)|what.*(bring|trouble|problem)|tell me about|when did|how long)/,ev:'open questions'},
+    {re:/\b(medicine|medication|tablet|drug|dose|mg|take them|taking any)/,ev:'medication history'},
+    {re:/\b(chest pain|breath|dizzy|faint|swelling|blood|fever|allerg|pain (now|worse)|worse when)/,ev:'red-flag screening'},
+    {re:/\b(should|advice|recommend|important|see (a|your) (gp|doctor)|emergency|999|understand)/,ev:'advice & plan'},
+    {re:/\b(sorry|understand|worry|worrying|scary|i can see|thank you)/,ev:'empathy'}];
+  var items=DEFAULT_RUBRIC.map(function(r,i){
+    var hit=probes[i]&&probes[i].re.test(t);
+    return{desc:r.desc,score:hit?r.max:(t.length>200?1:0),max:r.max,evidence:hit?('auto: '+probes[i].ev):'auto: not detected'};});
+  return{items:items,total:items.reduce(function(a,b){return a+b.score;},0),max:items.reduce(function(a,b){return a+b.max;},0),feedback:'Offline auto-scoring (AI examiner unreachable). Indicative only.'};}
+async function scoreSession(){
+  var transcript=transcriptText()||'(student did not speak)';
+  var rubricTxt=state.rubric.length?state.rubric.map(function(r){return'- '+r.desc+' (0-'+r.max+')';}).join('\n'):'Create 6 criteria × 2 marks covering: intro & consent; open-question HPC; medication history (incl. OTC/herbal); red-flag check; advice & plan; communication & empathy.';
+  var sys='You are a strict but fair OSCE examiner. Output ONLY valid JSON. No markdown, no fences, no commentary.';
+  var user='CASE:\n'+state.caseScenario.slice(0,6000)+'\n\nRUBRIC:\n'+rubricTxt+'\n\nTRANSCRIPT (STUDENT = student):\n'+transcript.slice(0,9000)+'\n\nScore each criterion 0..max from ONLY what the student said. Return JSON: {"total":0,"max":0,"items":[{"desc":"criterion","score":0,"max":2,"evidence":"short reason, quote if possible"}],"feedback":"3 sentences"}. "max" = sum of criterion maxima.';
+  try{
+    var out=await geminiChat([{role:'user',content:user}],sys,1600);
+    var j=extractJSON(out);
+    if(j&&j.items&&j.items.length){
+      var maxSum=0,tot=0;
+      var items=j.items.map(function(it){
+        var mx=clampN(parseInt(it.max,10)||2,1,10);
+        var sc=clampN(parseInt(it.score,10)||0,0,mx);
+        maxSum+=mx;tot+=sc;
+        return{desc:String(it.desc||'Criterion').slice(0,220),score:sc,max:mx,evidence:String(it.evidence||'').slice(0,300)};});
+      return{items:items,total:clampN(parseInt(j.total,10)||tot,0,maxSum),max:maxSum,feedback:String(j.feedback||'').slice(0,1200)};}
+    throw new Error('bad JSON');
+  }catch(e){
+    dbg('AI scoring failed → local ('+safeMsg(e)+')','warn');
+    return localScore(transcript);}}
+function renderResults(score){
+  var pct=score.max?Math.round(score.total/score.max*100):0;
+  $('total-score').textContent=score.total+' / '+score.max;
+  $('percentage').textContent=pct+'%';
+  $('score-circle').style.setProperty('--pct',pct);
+  var box=$('rubric-results');
+  box.innerHTML='';
+  score.items.forEach(function(it){
+    var cls=it.score>=it.max?'full':(it.score<=0?'zero':'partial');
+    var d=document.createElement('div');
+    d.className='ri '+cls;
+    d.innerHTML='<div class="ri-head"><div class="ri-desc">'+esc(it.desc)+'</div><div class="ri-score">'+it.score+' / '+it.max+'</div></div>'+(it.evidence?'<div class="ri-evidence">'+esc(it.evidence)+'</div>':'');
+    box.appendChild(d);});
+  $('feedback').textContent=score.feedback||'—';
+  state.lastScore=score;}
+
+/* ============ UI ============ */
+var toastTimer=null;
+function toast(m){
+  var t=$('toast');
+  t.textContent=m;
+  t.style.display='block';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.style.display='none';},4000);}
+function setKeyStatus(txt,cls){
+  var el=$('key-status');
+  el.textContent=txt;
+  el.className='key-status'+(cls?' '+cls:'');}
+function updateStartBtn(){
+  var ok=state.keyVerified&&!!state.rawDoc;
+  $('start-btn').disabled=!ok;
+  $('status-message').textContent=ok
+    ?(state.prep.status==='ready'?'Ready — case pre-studied, common questions answer instantly.':'Ready — tip: press "🧠 Prepare case" for instant answers.')
+    :(!state.keyVerified?'Verify your Gemini API key to continue.':'Load a case file or the demo to continue.');}
+async function manualVerify(){
+  var k=cleanKey($('api-key').value);
+  if(!k){setKeyStatus('Enter a key first','err');return;}
+  state.geminiKey=k;
+  $('api-key').value=k;
+  setKeyStatus('Verifying…','pending');
+  try{
+    var res=await verifyAndDiscover();
+    setKeyStatus('✓ '+res.llm,'ok');
+    try{localStorage.setItem('osce_gem_key',state.geminiKey);}catch(_){}
+    updateStartBtn();
+    toast('Gemini ready — '+res.llm);
+    if(state.rawDoc&&!state.prep.qaBank.length)prepareCase();
+  }catch(e){
+    state.keyVerified=false;
+    setKeyStatus(safeMsg(e).slice(0,46),'err');
+    updateStartBtn();}}
+async function silentVerify(){
+  setKeyStatus('Saved key — verifying…','pending');
+  try{
+    var res=await verifyAndDiscover();
+    setKeyStatus('✓ '+res.llm,'ok');
+    updateStartBtn();
+    if(state.rawDoc&&!state.prep.qaBank.length)prepareCase();
+  }catch(e){setKeyStatus('Saved key invalid — re-verify','err');}}
+function sendManual(){
+  var v=$('manual-input').value.trim();
+  if(!v)return;
+  $('manual-input').value='';
+  sendToPatient(v);}
+async function vbTest(gender){
+  if(!vbReady()){
+    toast('Connecting…');
+    var got=await vbConnect(true);
+    if(!got){
+      setVoiceNote('Testing browser backup voice');
+      var line0=gender==='male'?"Hello doctor, thanks for seeing me.":"Hello doctor, thank you for seeing me.";
+      await browserSpeak(line0,gender||state.effectiveGender);
+      return;}}
+  syncVoiceUI();
+  state.effectiveGender=gender;
+  state.sessionVoiceGender=gender;
+  ensureAudioCtx();
+  cancelSpeech();
+  var vName=gender==='male'?state.vbVoiceMale:state.vbVoiceFemale;
+  var line=gender==='male'?"Hello doctor, thanks for seeing me. I've not been feeling myself this week.":"Hello doctor, thank you for seeing me. I've been a little worried lately.";
+  setVoiceNote('Testing '+(gender==='male'?'♂':'♀')+' "'+vName+'"…');
+  var t0=performance.now(),played=false;
+  try{
+    var audio=await mcpSpeakVariants(sanitizeForTTS(line),gender);
+    played=await playAudioResult(audio);
+  }catch(e){
+    dbg('Test failed: '+safeMsg(e),'err');
+    played=false;}
+  if(!played)played=await browserSpeak(line,gender);
+  var ms=Math.round(performance.now()-t0);
+  setVoiceNote(played?('🔊 '+(gender==='male'?'♂':'♀')+' "'+vName+'" ✓ ('+(ms/1000).toFixed(1)+'s)'):'Test failed — see log');
+  toast(played?'🔊 Voice works — '+vName:'⚠️ Test failed — see log');}
+
+/* ============ INIT ============ */
+function init(){
+  if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  state.timeLimitSec=parseInt($('time-limit').value,10)*60||600;
+  state.ttsMode=$('tts-mode').value;
+  state.micLang=$('mic-lang').value;
+  state.userRole=$('user-role').value;
+  try{
+    var vbU=localStorage.getItem('osce_vb_url');
+    if(vbU){state.vb.base=vbU;$('vb-url').value=vbU;}
+    var sf=localStorage.getItem('osce_vb_female'),sm=localStorage.getItem('osce_vb_male');
+    if(sf)state.vbVoiceFemale=sf;
+    if(sm)state.vbVoiceMale=sm;
+  }catch(_){}
+  renderVbVoiceSelects(defaultCatalog());
+  autoAssignVbVoices();
+  buildEmotionGrid('emotion-grid',true);
+  buildEmotionGrid('emotion-grid-setup',false);
+  setEmotion('calm');
+  updateSpriteNote();
+  try{
+    var saved=localStorage.getItem('osce_gem_key');
+    if(saved){$('api-key').value=saved;state.geminiKey=saved;silentVerify();}
+  }catch(_){}
+  $('log-toggle').addEventListener('click',function(){
+    var on=$('debug-log').classList.toggle('show');
+    this.textContent=on?'hide ▴':'show ▾';});
+  $('verify-key').addEventListener('click',manualVerify);
+  $('api-key').addEventListener('keydown',function(e){if(e.key==='Enter')manualVerify();});
+  $('vb-connect').addEventListener('click',function(){vbConnect(true);});
+  $('vb-url').addEventListener('keydown',function(e){if(e.key==='Enter')vbConnect(true);});
+  $('vb-diagnose').addEventListener('click',vbDiagnose);
+  $('vb-test-f').addEventListener('click',function(){vbTest('female');});
+  $('vb-test-m').addEventListener('click',function(){vbTest('male');});
+  $('vb-female-voice').addEventListener('change',function(){
+    state.vbVoiceFemale=this.value;
+    try{localStorage.setItem('osce_vb_female',this.value);}catch(_){}
+    setVoiceNote();});
+  $('vb-male-voice').addEventListener('change',function(){
+    state.vbVoiceMale=this.value;
+    try{localStorage.setItem('osce_vb_male',this.value);}catch(_){}
+    setVoiceNote();});
+  $('upload-male-sprite').addEventListener('click',function(){$('male-sprite-input').click();});
+  $('upload-female-sprite').addEventListener('click',function(){$('female-sprite-input').click();});
+  $('male-sprite-input').addEventListener('change',function(){readSprite(this,'male');});
+  $('female-sprite-input').addEventListener('change',function(){readSprite(this,'female');});
+  $('clear-sprites').addEventListener('click',function(){
+    state.avatarMale='';
+    state.avatarFemale='';
+    refreshAvatar();
+    updateEmoPreview();
+    updateSpriteNote();
+    toast('Sprites cleared');});
+  var uz=$('upload-zone');
+  uz.addEventListener('click',function(){$('file-input').click();});
+  uz.addEventListener('dragover',function(e){e.preventDefault();uz.classList.add('dragover');});
+  uz.addEventListener('dragleave',function(){uz.classList.remove('dragover');});
+  uz.addEventListener('drop',function(e){
+    e.preventDefault();
+    uz.classList.remove('dragover');
+    if(e.dataTransfer.files&&e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+  $('file-input').addEventListener('change',function(){
+    if(this.files&&this.files[0])handleFile(this.files[0]);
+    this.value='';});
+  $('load-demo-btn').addEventListener('click',function(){setCaseText(DEMO_CASE);toast('Demo case loaded');});
+  $('prep-btn').addEventListener('click',function(){if(!this.disabled)prepareCase();});
+  $('user-role').addEventListener('change',function(){state.userRole=this.value;});
+  $('mic-lang').addEventListener('change',function(){
+    state.micLang=this.value;
+    setVoiceNote();
+    if(state.recognitionActive){stopRecognition();setTimeout(startRecognition,200);}});
+  $('voice-gender').addEventListener('change',function(){
+    if(state.running){toast('Voice locked during session');return;}
+    syncVoiceUI();});
+  $('tts-mode').addEventListener('change',function(){state.ttsMode=this.value;});
+  $('time-limit').addEventListener('change',function(){
+    if(!state.running)state.timeLimitSec=parseInt(this.value,10)*60||600;});
+  $('start-btn').addEventListener('click',function(){if(!this.disabled)startSession();});
+  $('pause-btn').addEventListener('click',togglePause);
+  $('end-btn').addEventListener('click',function(){endSession('Ended by student');});
+  $('mic-btn').addEventListener('click',function(){
+    if(!state.running)return;
+    if(state.recognitionActive){
+      state.micUserMuted=true;
+      stopListening();
+      this.classList.add('off');
+      $('mic-title').textContent='Mic paused';
+      $('mic-sub').textContent='Tap to resume';
+      setMeterStatus('');}
+    else{
+      state.micUserMuted=false;
+      this.classList.remove('off');
+      $('mic-title').textContent='Listening';
+      $('mic-sub').textContent='Speak — your words appear live';
+      startListening();}});
+  Array.prototype.forEach.call(document.querySelectorAll('.quick-btn'),function(b){
+    b.addEventListener('click',function(){sendToPatient(b.getAttribute('data-text'));});});
+  $('manual-send').addEventListener('click',sendManual);
+  $('manual-input').addEventListener('keydown',function(e){if(e.key==='Enter')sendManual();});
+  $('restart-btn').addEventListener('click',function(){
+    $('results-panel').classList.add('hidden');
+    $('setup-panel').classList.remove('hidden');
+    document.body.classList.remove('session-mode');
+    setStatus('Ready','linear-gradient(90deg,var(--green),var(--cyan))');
+    updateStartBtn();
+    updatePrepUI();});
+  $('download-btn').addEventListener('click',function(){
+    var sc=state.lastScore,lines=[];
+    lines.push('OSCE AI Patient — Session Transcript');
+    lines.push('Case: '+state.caseTitle);
+    lines.push('Date: '+new Date().toLocaleString());
+    lines.push('');
+    lines.push(transcriptText()||'(no speech)');
+    if(sc){
+      lines.push('');
+      lines.push('SCORE: '+sc.total+' / '+sc.max);
+      sc.items.forEach(function(it){
+        lines.push('- ['+it.score+'/'+it.max+'] '+it.desc+(it.evidence?' — '+it.evidence:''));});
+      lines.push('');
+      lines.push('FEEDBACK: '+sc.feedback);}
+    var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='osce-transcript.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);});
+  $('print-btn').addEventListener('click',function(){window.print();});
+  setStatus('Ready','linear-gradient(90deg,var(--green),var(--cyan))');
+  updateStartBtn();
+  updatePrepUI();
+  vbConnect(false);
+  setInterval(function(){
+    if(state.vb.connecting||document.hidden||state.vb.mcpOk)return;
+    vbConnect(false);
+  },30000);
+  dbg('App ready — async speak+poll wired · press 🔌 Connect','ok');
+  if(location.protocol==='file:'){
+    dbg('⚠ Page opened as file:// — CORS to 127.0.0.1 is often blocked. Serve via http://localhost.','warn');
+    toast('Tip: open this page via http://localhost (not file://)');
+  }}
+
+try{
+  init();
+}catch(e){
+  setStatus('⚠ Startup error: '+safeMsg(e),'linear-gradient(90deg,#ef4444,#b91c1c)');
+  dbg('INIT FAILED: '+safeMsg(e),'err');
+  try{console.error(e);}catch(_){}
+}
+</script>
+</body>
+</html>
